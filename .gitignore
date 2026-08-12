@@ -5,4 +5,5 @@ protocols/*.c
 protocols/*.h
 
 .nvim.lua
-
+compile_commands.json
+.cache
