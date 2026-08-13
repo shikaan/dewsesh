@@ -1,4 +1,4 @@
-#include <wlr-layer-shell-unstable-v1.h>
+#include "src/ctx.h"
 #include "src/log.h"
 #include <cairo/cairo.h>
 #include <errno.h>
@@ -11,6 +11,7 @@
 #include <sys/syscall.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <wlr-layer-shell-unstable-v1.h>
 
 static struct wl_compositor *compositor = NULL;
 static struct wl_shm *shm = NULL;
@@ -20,45 +21,15 @@ static struct wl_surface *surface;
 static struct zwlr_layer_surface_v1 *layer_surface;
 
 static uint32_t width = 400, height = 200;
-static int configured = 0;
+
+// FIXME: fish from the pool
+static ctx_t ctx;
 
 static struct wl_buffer *draw_frame(void) {
-  uint32_t stride = width * 4;
-  uint32_t size = stride * height;
+  // FIXME: fish from the pool
+  ctx_create(&ctx, 400, 200, shm);
 
-  // FIXME: This is a linux-specific syscall. We should fallback to
-  // `anonymous_shm_open` as we do in dewlock
-  int fd = (int)syscall(SYS_memfd_create, "layer-demo", 0);
-  if (fd < 0) {
-    log_error("memfd_create failed: %s\n", strerror(errno));
-    exit(1);
-  }
-  if (ftruncate(fd, size) < 0) {
-    log_error("ftruncate failed: %s\n", strerror(errno));
-    close(fd);
-    exit(1);
-  }
-  void *data =
-      mmap(NULL, (size_t)size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-  if (data == MAP_FAILED) {
-    log_error("mmap failed: %s\n", strerror(errno));
-    close(fd);
-    exit(1);
-  }
-
-  log_debug("width=%d height=%d stride=%d size=%d data=%p\n", width, height,
-            stride, size, data);
-
-  // Draw with cairo directly onto the shm-backed memory.
-  cairo_surface_t *csurf = cairo_image_surface_create_for_data(
-      data, CAIRO_FORMAT_ARGB32, (int)width, (int)height, (int)stride);
-  cairo_status_t st = cairo_surface_status(csurf);
-  if (st != CAIRO_STATUS_SUCCESS) {
-    log_error("cairo error. Surface status: %s\n", cairo_status_to_string(st));
-    exit(1);
-  }
-  cairo_t *cr = cairo_create(csurf);
-
+  cairo_t *cr = ctx.cairo.ctx;
   // Fully transparent background.
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr, 0, 0, 0, 0);
@@ -71,23 +42,7 @@ static struct wl_buffer *draw_frame(void) {
   cairo_rectangle(cr, margin, margin, width - 2 * margin, height - 2 * margin);
   cairo_fill(cr);
 
-  // A border so it's visible against dark backgrounds too.
-  cairo_set_source_rgba(cr, 1, 1, 1, 0.2);
-  cairo_set_line_width(cr, 2);
-  cairo_rectangle(cr, margin, margin, width - 2 * margin, height - 2 * margin);
-  cairo_stroke(cr);
-
-  cairo_destroy(cr);
-  cairo_surface_destroy(csurf);
-
-  struct wl_shm_pool *pool = wl_shm_create_pool(shm, fd, (int32_t)size);
-  struct wl_buffer *buffer =
-      wl_shm_pool_create_buffer(pool, 0, (int32_t)width, (int32_t)height,
-                                (int32_t)stride, WL_SHM_FORMAT_ARGB8888);
-  wl_shm_pool_destroy(pool);
-  close(fd);
-  munmap(data, (size_t)size);
-  return buffer;
+  return ctx.wl.buffer;
 }
 
 // --- layer surface events ---
@@ -96,7 +51,7 @@ static void layer_surface_configure(void *data,
                                     struct zwlr_layer_surface_v1 *surf,
                                     uint32_t serial, uint32_t w, uint32_t h) {
   (void)data;
-  log_debug("configure event: w=%u h=%u\n", w, h);
+  log_debug("configure event: w=%u h=%u", w, h);
   if (w > 0)
     width = w;
   if (h > 0)
@@ -107,7 +62,6 @@ static void layer_surface_configure(void *data,
   wl_surface_attach(surface, buffer, 0, 0);
   wl_surface_damage_buffer(surface, 0, 0, (int)width, (int)height);
   wl_surface_commit(surface);
-  configured = 1;
 }
 
 static void layer_surface_closed(void *data,
