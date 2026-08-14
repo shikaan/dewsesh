@@ -1,6 +1,7 @@
 #pragma once
+
 #include "cairo.h"
-#include "types.h"
+#include "result.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -8,8 +9,8 @@
 
 typedef struct {
   bool busy;
-
   size_t width, height;
+
   struct {
     struct wl_buffer *buffer;
   } wl;
@@ -25,6 +26,4 @@ typedef struct {
   } cairo;
 } ctx_t;
 
-result_t ctx_create(ctx_t *c, size_t width, size_t height,
-                    struct wl_shm *wl_shm);
-void ctx_destroy(ctx_t **c);
+result_t ctx_get(size_t width, size_t height, struct wl_shm *wl_shm, ctx_t** c);

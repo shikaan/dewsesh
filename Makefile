@@ -59,12 +59,12 @@ protocols/wlr-layer-shell-unstable-v1.c: protocols/wlr-layer-shell-unstable-v1.h
 
 protocols/wlr-layer-shell-unstable-v1.o: CFLAGS := -O2
 
-src/ctx.o: src/log.o
+src/ctx.o: src/log.o src/result.o
 
 main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo) \
 	-isystem protocols
 main: LDLIBS += $(shell pkg-config --libs wayland-client cairo)
-main: src/log.o src/ctx.o \
+main: src/log.o src/ctx.o src/result.o \
 	protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o
 
 clean:

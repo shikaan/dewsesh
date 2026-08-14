@@ -1,5 +1,6 @@
 #include "src/ctx.h"
 #include "src/log.h"
+#include "src/result.h"
 #include <cairo/cairo.h>
 #include <errno.h>
 #include <stddef.h>
@@ -22,27 +23,27 @@ static struct zwlr_layer_surface_v1 *layer_surface;
 
 static uint32_t width = 400, height = 200;
 
-// FIXME: fish from the pool
-static ctx_t ctx;
-
 static struct wl_buffer *draw_frame(void) {
-  // FIXME: fish from the pool
-  ctx_create(&ctx, 400, 200, shm);
+  ctx_t *ctx = NULL;
+  result_t r = ctx_get(400, 200, shm, &ctx);
+  if (r != OK) {
+    log_error("cannot get buffer: %s", RESULT_MESSAGE[r]);
+    return NULL;
+  }
 
-  cairo_t *cr = ctx.cairo.ctx;
+  cairo_t *cr = ctx->cairo.ctx;
   // Fully transparent background.
   cairo_set_operator(cr, CAIRO_OPERATOR_SOURCE);
   cairo_set_source_rgba(cr, 0, 0, 0, 0);
   cairo_paint(cr);
 
-  // The "box": a rounded-ish filled rectangle in the middle of our surface.
   cairo_set_operator(cr, CAIRO_OPERATOR_OVER);
   cairo_set_source_rgba(cr, 0.12, 0.12, 0.15, 0.95);
   double margin = 20;
   cairo_rectangle(cr, margin, margin, width - 2 * margin, height - 2 * margin);
   cairo_fill(cr);
 
-  return ctx.wl.buffer;
+  return ctx->wl.buffer;
 }
 
 // --- layer surface events ---

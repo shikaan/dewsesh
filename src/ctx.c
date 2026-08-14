@@ -1,7 +1,7 @@
 #include "ctx.h"
 #include "cairo.h"
 #include "log.h"
-#include "types.h"
+#include "result.h"
 #include <errno.h>
 #include <stddef.h>
 #include <stdlib.h>
@@ -54,7 +54,7 @@ static int create_shm(void) {
 #endif
 }
 
-result_t ctx_create(ctx_t *c, size_t width, size_t height,
+static result_t ctx_create(ctx_t *c, size_t width, size_t height,
                     struct wl_shm *wl_shm) {
   size_t stride = width * 4;
   size_t size = stride * height;
@@ -108,7 +108,7 @@ result_t ctx_create(ctx_t *c, size_t width, size_t height,
   return OK;
 }
 
-void ctx_destroy(ctx_t **c) {
+static void ctx_destroy(ctx_t **c) {
   ctx_t *self = *c;
 
   if (self->wl.buffer)
@@ -122,4 +122,30 @@ void ctx_destroy(ctx_t **c) {
 
   memset(self, 0, sizeof(ctx_t));
   *c = NULL;
+}
+
+static ctx_t pool[2] = {0};
+
+result_t ctx_get(size_t width, size_t height, struct wl_shm *wl_shm,
+                 ctx_t **ctx) {
+  ctx_t *selected = pool[0].busy ? pool[1].busy ? NULL : &pool[1] : &pool[0];
+  if (!selected) {
+    return ERR_CTX_MISSING_BUFFER;
+  }
+
+  if (selected->height == height && selected->width == width) {
+    *ctx = selected;
+    return OK;
+  }
+
+  ctx_t *slot = selected;
+  ctx_destroy(&selected);
+
+  result_t err = ctx_create(slot, width, height, wl_shm);
+  if (err != OK)
+    return err;
+
+  *ctx = slot;
+
+  return OK;
 }

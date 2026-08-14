@@ -1,4 +1,5 @@
-#pragma once
+#ifndef __DEWSESH_LOG_H__
+#define __DEWSESH_LOG_H__
 
 typedef enum {
   LOG_LEVEL_NONE,
@@ -20,3 +21,5 @@ void _log_put(log_level_t level, const char *file, int line, const char* fmt, ..
 #define log_warn(Fmt, ...) log_put(LOG_LEVEL_WARN, Fmt, ##__VA_ARGS__)
 #define log_info(Fmt, ...) log_put(LOG_LEVEL_INFO, Fmt, ##__VA_ARGS__)
 #define log_debug(Fmt, ...) log_put(LOG_LEVEL_DEBUG, Fmt, ##__VA_ARGS__)
+
+#endif
