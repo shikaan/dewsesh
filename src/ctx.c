@@ -4,6 +4,7 @@
 #include "result.h"
 #include <errno.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -16,6 +17,8 @@
 #include <stdio.h>
 #include <time.h>
 #endif
+
+static ctx_t pool[2] = {0};
 
 static void wl_release(void *data, struct wl_buffer *wl_buffer) {
   (void)wl_buffer;
@@ -54,10 +57,10 @@ static int create_shm(void) {
 #endif
 }
 
-static result_t ctx_create(ctx_t *c, size_t width, size_t height,
-                    struct wl_shm *wl_shm) {
-  size_t stride = width * 4;
-  size_t size = stride * height;
+static result_t ctx_create(ctx_t *c, uint32_t w, uint32_t h,
+                           struct wl_shm *shm) {
+  uint32_t stride = w * 4;
+  uint32_t size = stride * h;
 
   int fd = create_shm();
   if (fd < 0) {
@@ -78,16 +81,15 @@ static result_t ctx_create(ctx_t *c, size_t width, size_t height,
     return ERR_CTX_ALLOCATION;
   }
 
-  struct wl_shm_pool *wl_shm_pool =
-      wl_shm_create_pool(wl_shm, fd, (int32_t)size);
+  struct wl_shm_pool *wl_shm_pool = wl_shm_create_pool(shm, fd, (int32_t)size);
   struct wl_buffer *wl_buffer =
-      wl_shm_pool_create_buffer(wl_shm_pool, 0, (int32_t)width, (int32_t)height,
+      wl_shm_pool_create_buffer(wl_shm_pool, 0, (int32_t)w, (int32_t)h,
                                 (int32_t)stride, WL_SHM_FORMAT_ARGB8888);
   wl_shm_pool_destroy(wl_shm_pool);
   close(fd);
 
   cairo_surface_t *target = cairo_image_surface_create_for_data(
-      data, CAIRO_FORMAT_ARGB32, (int)width, (int)height, (int)stride);
+      data, CAIRO_FORMAT_ARGB32, (int)w, (int)h, (int)stride);
   cairo_status_t status = cairo_surface_status(target);
   if (status != CAIRO_STATUS_SUCCESS) {
     log_error("cairo error: %s", cairo_status_to_string(status));
@@ -96,8 +98,8 @@ static result_t ctx_create(ctx_t *c, size_t width, size_t height,
 
   c->busy = false;
   c->wl.buffer = wl_buffer;
-  c->height = height;
-  c->width = width;
+  c->height = h;
+  c->width = w;
   c->shm.buf = data;
   c->shm.len = size;
   c->cairo.target = target;
@@ -108,9 +110,7 @@ static result_t ctx_create(ctx_t *c, size_t width, size_t height,
   return OK;
 }
 
-static void ctx_destroy(ctx_t **c) {
-  ctx_t *self = *c;
-
+static void ctx_deinit(ctx_t *self) {
   if (self->wl.buffer)
     wl_buffer_destroy(self->wl.buffer);
 
@@ -121,31 +121,36 @@ static void ctx_destroy(ctx_t **c) {
     cairo_surface_destroy(self->cairo.target);
 
   memset(self, 0, sizeof(ctx_t));
-  *c = NULL;
 }
 
-static ctx_t pool[2] = {0};
+result_t ctx_init(uint32_t w, uint32_t h, struct wl_shm *shm) {
+  result_t res;
 
-result_t ctx_get(size_t width, size_t height, struct wl_shm *wl_shm,
-                 ctx_t **ctx) {
+  ctx_deinit(&pool[0]);
+  res = ctx_create(&pool[0], w, h, shm);
+  if (res != OK)
+    return res;
+
+  ctx_deinit(&pool[1]);
+  res = ctx_create(&pool[1], w, h, shm);
+  if (res != OK)
+    return res;
+
+  return OK;
+}
+
+result_t ctx_get(uint32_t w, uint32_t h, ctx_t **ctx) {
   ctx_t *selected = pool[0].busy ? pool[1].busy ? NULL : &pool[1] : &pool[0];
   if (!selected) {
+    *ctx = NULL;
     return ERR_CTX_MISSING_BUFFER;
   }
 
-  if (selected->height == height && selected->width == width) {
-    *ctx = selected;
-    return OK;
+  if (selected->height != h || selected->width != w) {
+    *ctx = NULL;
+    return ERR_CTX_BUFFER_MISMATCH;
   }
 
-  ctx_t *slot = selected;
-  ctx_destroy(&selected);
-
-  result_t err = ctx_create(slot, width, height, wl_shm);
-  if (err != OK)
-    return err;
-
-  *ctx = slot;
-
+  *ctx = selected;
   return OK;
 }

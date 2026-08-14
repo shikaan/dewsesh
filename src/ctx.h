@@ -26,4 +26,6 @@ typedef struct {
   } cairo;
 } ctx_t;
 
-result_t ctx_get(size_t width, size_t height, struct wl_shm *wl_shm, ctx_t** c);
+result_t ctx_init(uint32_t w, uint32_t h, struct wl_shm *shm);
+
+result_t ctx_get(uint32_t w, uint32_t h, ctx_t **ctx);
