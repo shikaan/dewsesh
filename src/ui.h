@@ -17,7 +17,7 @@ typedef struct {
   double w, h;
 } ui_text_bounds_t;
 
-void ui_init(ctx_t *c);
+void ui_init(ctx_t *c, ui_color_t background);
 
 void ui_set_source_color(ui_color_t color);
 

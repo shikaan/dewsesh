@@ -17,20 +17,17 @@
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
 
-static uint32_t width = 640;
-static uint32_t height = 480;
-
-static void draw_frame(ctx_t **ctx) {
-  result_t r = ctx_get(width, height, ctx);
+static void draw_frame(uint32_t w, uint32_t h, ctx_t **ctx) {
+  result_t r = ctx_get(w, h, ctx);
   if (r != OK) {
     return;
   }
 
-  ui_init(*ctx);
-  ui_rect(0, 0, (double)(*ctx)->width, (double)(*ctx)->height, 0x00ff00ff);
+  ui_init(*ctx, 0x00000088);
+  ui_rect(50, 50, 500, 500, 0x00ff00ff);
 
   ui_text_t opts = {
-      .color = 0x000000ff,
+      .color = 0xffffffff,
       .size = 16,
       .family = "Noto Sans",
       .weight = CAIRO_FONT_WEIGHT_BOLD,
@@ -50,8 +47,7 @@ int main(void) {
   log_init(LOG_LEVEL_DEBUG);
 
   shell_t *shl = NULL;
-  shl_init(640, 480, callbacks, &shl);
-  ctx_init(640, 480, shl->shm);
+  shl_init(callbacks, &shl);
 
   // FIXME: Autoclose the app in 5s, to prevent the pkill dance.
   signal(SIGALRM, exit);

@@ -4,13 +4,13 @@
 
 static cairo_t *cairo;
 
-void ui_init(ctx_t *c) { 
+void ui_init(ctx_t *c, ui_color_t background) { 
   cairo = c->cairo.ctx;
   cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
   cairo_identity_matrix(cairo);
 
   cairo_save(cairo);
-  ui_set_source_color(0x000000ff);
+  ui_set_source_color(background);
   cairo_set_operator(cairo, CAIRO_OPERATOR_SOURCE);
   cairo_paint(cairo);
   cairo_restore(cairo);

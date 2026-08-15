@@ -27,6 +27,9 @@ static struct zwlr_layer_shell_v1 *layer_shell = NULL;
 static struct wl_surface *surface;
 static struct zwlr_layer_surface_v1 *layer_surface;
 
+static uint32_t surface_width = 0;
+static uint32_t surface_height = 0;
+
 static const struct wl_registry_listener registry_listener = {
     .global = registry_global,
     .global_remove = registry_global_remove,
@@ -41,10 +44,24 @@ static void layer_surface_configure(void *data,
                                     struct zwlr_layer_surface_v1 *surf,
                                     uint32_t serial, uint32_t w, uint32_t h) {
   (void)data;
-  // FIXME: w,h, can be zero!
-  // FIXME: is this where we set the height and width for context?
   log_debug("configure event: w=%u h=%u", w, h);
   zwlr_layer_surface_v1_ack_configure(surf, serial);
+
+  if (w == 0 || h == 0) {
+    // compositor hasn't settled on a size yet; wait for the next configure
+    return;
+  }
+
+  if (w != surface_width || h != surface_height) {
+    result_t res = ctx_init(w, h, shm);
+    if (res != OK) {
+      log_error("failed to (re)initialize rendering context", NULL);
+      return;
+    }
+    surface_width = w;
+    surface_height = h;
+  }
+
   shl_draw();
 }
 
@@ -79,7 +96,7 @@ static void registry_global_remove(void *data, struct wl_registry *registry,
 }
 
 static shell_t shell = {0};
-result_t shl_init(uint32_t w, uint32_t h, callbacks_t cbs, shell_t **shl) {
+result_t shl_init(callbacks_t cbs, shell_t **shl) {
   display = wl_display_connect(NULL);
   if (!display) {
     log_error("failed to connecto to Wayland display", NULL);
@@ -102,7 +119,14 @@ result_t shl_init(uint32_t w, uint32_t h, callbacks_t cbs, shell_t **shl) {
   layer_surface = zwlr_layer_shell_v1_get_layer_surface(
       layer_shell, surface, NULL, ZWLR_LAYER_SHELL_V1_LAYER_OVERLAY, "dewsesh");
 
-  zwlr_layer_surface_v1_set_size(layer_surface, w, h);
+  // anchoring to every edge with a zero size lets the compositor pick the
+  // size, i.e. the surface fills all available space on its output
+  zwlr_layer_surface_v1_set_anchor(
+      layer_surface, ZWLR_LAYER_SURFACE_V1_ANCHOR_TOP |
+                         ZWLR_LAYER_SURFACE_V1_ANCHOR_BOTTOM |
+                         ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |
+                         ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT);
+  zwlr_layer_surface_v1_set_size(layer_surface, 0, 0);
   zwlr_layer_surface_v1_set_keyboard_interactivity(
       layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 
@@ -117,7 +141,10 @@ result_t shl_init(uint32_t w, uint32_t h, callbacks_t cbs, shell_t **shl) {
 
 void shl_draw(void) {
   ctx_t *c = NULL;
-  shell.callbacks.draw(&c);
+  shell.callbacks.draw(surface_width, surface_height, &c);
+  if (!c)
+    return;
+
   wl_surface_attach(surface, c->wl.buffer, 0, 0);
   wl_surface_damage_buffer(surface, 0, 0, (int)c->width, (int)c->height);
   wl_surface_commit(surface);
@@ -125,7 +152,6 @@ void shl_draw(void) {
 
 void shl_run(void) {
   while (wl_display_dispatch(display) != -1) {
-    log_debug("dispatch", NULL) 
     // event loop; configure event above does the actual drawing
   }
 }
