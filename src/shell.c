@@ -104,7 +104,7 @@ result_t shl_init(uint32_t w, uint32_t h, callbacks_t cbs, shell_t **shl) {
 
   zwlr_layer_surface_v1_set_size(layer_surface, w, h);
   zwlr_layer_surface_v1_set_keyboard_interactivity(
-      layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_ON_DEMAND);
+      layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 
   zwlr_layer_surface_v1_add_listener(layer_surface, &layer_surface_listener,
                                      NULL);
@@ -125,6 +125,7 @@ void shl_draw(void) {
 
 void shl_run(void) {
   while (wl_display_dispatch(display) != -1) {
+    log_debug("dispatch", NULL) 
     // event loop; configure event above does the actual drawing
   }
 }

@@ -7,3 +7,5 @@ protocols/*.h
 .nvim.lua
 compile_commands.json
 .cache
+
+.todo
