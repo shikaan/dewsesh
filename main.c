@@ -111,11 +111,17 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
     return true;
   }
 
-  if (key == SHL_KEY_UP && evt == SHL_KBD_EVENT_KEYUP) {
+  if (key == SHL_KEY_UP && evt == SHL_KBD_EVENT_KEYDOWN) {
     app_option_t opt =
         (app_option_t)clamp((int)state.option + 1, 0, APP_OPTIONS);
     state.option = opt;
     return true;
+  }
+
+  if (key == SHL_KEY_SELECT && evt == SHL_KBD_EVENT_KEYDOWN) {
+    const char* cmd = APP_OPTION_CMD[state.option];
+    log_debug("cmd: %s", cmd);
+    return false;
   }
 
   log_info("unhandled keyboard event %d, key %d", evt, key);
