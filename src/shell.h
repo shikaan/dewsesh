@@ -6,6 +6,7 @@
 
 typedef struct {
   void (*draw)(uint32_t w, uint32_t h, ctx_t **c);
+  void (*key)(uint32_t code, ctx_t **c);
 } callbacks_t;
 
 typedef struct {
