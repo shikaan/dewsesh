@@ -98,6 +98,9 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   log_debug("received event %d, key %d", evt, key);
+  if (key == SHL_KEY_UNKNOWN)
+    return false;
+
   if (key == SHL_KEY_EXIT)
     exit(0);
 
