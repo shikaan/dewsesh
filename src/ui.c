@@ -4,7 +4,7 @@
 
 static cairo_t *cairo;
 
-void ui_init(ctx_t *c, ui_color_t background) { 
+void ui_init(ctx_t *c, ui_color_t background) {
   cairo = c->cairo.ctx;
   cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
   cairo_identity_matrix(cairo);
@@ -43,8 +43,9 @@ void ui_text_init(ui_text_t opts, const char *text, ui_text_bounds_t *extents) {
   cairo_text_extents_t ext;
   cairo_text_extents(cairo, text, &ext);
 
-  extents->h = ext.height;
-  extents->w = ext.width;
+  extents->height = ext.height;
+  extents->width = ext.width;
+  extents->y_bearing = ext.y_bearing;
 
   cairo_font_options_destroy(font_options);
 }
@@ -66,8 +67,34 @@ void ui_text(double x, double y, ui_text_t opts, const char *text) {
   ui_text_commit(x, y, text);
 }
 
-void ui_rect(double x , double y, double w, double h, ui_color_t c) {
+void ui_rect(double x, double y, double w, double h, ui_color_t c) {
   ui_set_source_color(c);
   cairo_rectangle(cairo, x, y, w, h);
   cairo_fill(cairo);
+}
+
+void ui_btn(double x, double y, double w, double h, ui_btn_t opts,
+            const char *text, const char *icon, ui_btn_status_t status) {
+  double hspacing = 16;
+
+  ui_rect(x, y, w, h, opts.color[status].bg);
+
+  ui_text_t text_opts = {
+      .color = opts.color[status].fg,
+      .size = 20,
+      .family = opts.icon_family,
+      .weight = CAIRO_FONT_WEIGHT_NORMAL,
+  };
+
+  ui_text_bounds_t bounds;
+
+  ui_text_init(text_opts, icon, &bounds);
+  double icony = y + h / 2 - bounds.y_bearing - bounds.height / 2;
+  ui_text_commit(x + hspacing, icony, icon);
+
+  text_opts.family = opts.text_family;
+  double labelx = x + hspacing + bounds.width + hspacing;
+  ui_text_init(text_opts, text, &bounds);
+  double labely = y + h / 2 - bounds.y_bearing - bounds.height / 2;
+  ui_text_commit(labelx, labely, text);
 }

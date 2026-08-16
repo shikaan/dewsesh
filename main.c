@@ -4,13 +4,10 @@
 #include "src/shell.h"
 #include "src/ui.h"
 #include <cairo/cairo.h>
-#include <errno.h>
 #include <signal.h>
 #include <stddef.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -23,20 +20,68 @@ static void draw_frame(uint32_t w, uint32_t h, ctx_t **ctx) {
     return;
   }
 
-  ui_init(*ctx, 0x00000088);
-  ui_rect(50, 50, 500, 500, 0x00ff00ff);
+  ui_init(*ctx, 0x00000099);
+  double vspace = 24;
+  double hspace = 36;
+  double nbuttons = 5;
+
+  double framew = 400;
+  double framex = (double)w / 2 - framew / 2;
+
+  double btnh = 48;
+  double btnw = framew - hspace * 2;
+  double btnx = framex + hspace;
+  double pady = 16;
+  double btnboxh = btnh + pady;
+
+  double headerh = 80;
+  double headery = vspace;
+
+  double footerh = 48;
+  double footerrely = btnboxh * nbuttons + vspace + headerh;
+
+  double frameh = footerrely - pady + footerh + vspace;
+  double framey = (double)h / 2 - frameh / 2;
+  double buttony = framey + headery + headerh;
 
   ui_text_t opts = {
-      .color = 0xffffffff,
-      .size = 16,
+      .color = 0xeaeaeaff,
+      .size = 28,
       .family = "Noto Sans",
       .weight = CAIRO_FONT_WEIGHT_BOLD,
   };
-  ui_text(46, 16, opts, "Suspend");
-  ui_text(46, 32, opts, "Hibernate");
-  opts.family = "FontAwesome";
+  ui_text(framex + hspace, framey + vspace + 24, opts, "End Session");
+  opts.size = 14;
   opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
-  ui_text(16, 32, opts, " ");
+  ui_text(framex + hspace, framey + vspace + 48, opts, "Select an option");
+
+  ui_btn_t btn_opts = {
+      .icon_family = "FontAwesome",
+      .text_family = "Noto Sans",
+      .color =
+          {
+              [UI_BTN_STATUS_NONE] = {.bg = 0x00000000, .fg = 0xeaeaeaff},
+              [UI_BTN_STATUS_SELECTED] = {.bg = 0x82a2beff, .fg = 0xeaeaeaff},
+          },
+  };
+
+  ui_btn(btnx, buttony + btnboxh * 0, btnw, btnh, btn_opts, "Lock", "",
+         UI_BTN_STATUS_SELECTED);
+  ui_btn(btnx, buttony + btnboxh * 1, btnw, btnh, btn_opts, "Suspend", "",
+         UI_BTN_STATUS_NONE);
+  ui_btn(btnx, buttony + btnboxh * 2, btnw, btnh, btn_opts, "Hibernate", "",
+         UI_BTN_STATUS_NONE);
+  ui_btn(btnx, buttony + btnboxh * 3, btnw, btnh, btn_opts, "Restart", "",
+         UI_BTN_STATUS_NONE);
+  ui_btn(btnx, buttony + btnboxh * 4, btnw, btnh, btn_opts, "Shutdown", "",
+         UI_BTN_STATUS_NONE);
+
+  ui_text_bounds_t bounds;
+  opts.size = 12;
+  const char *footer = "Arrows to move · Enter to select · Esc to cancel";
+  ui_text_init(opts, footer, &bounds);
+  ui_text_commit(framex + framew / 2 - bounds.width / 2,
+                 framey + footerrely + 8, footer);
 }
 
 callbacks_t callbacks = {
