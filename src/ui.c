@@ -1,6 +1,7 @@
 #include "ui.h"
 #include "assert.h"
 #include "cairo.h"
+#include <stddef.h>
 
 static cairo_t *cairo;
 
@@ -25,7 +26,7 @@ void ui_set_source_color(ui_color_t color) {
                         (color >> (0 * 8) & 0xFF) / 255.0);
 }
 
-void ui_text_init(ui_text_t opts, const char *text, ui_text_bounds_t *extents) {
+void ui_text_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
   assert(extents && "rect must be non-null");
   assert(cairo && "cairo must be non-null");
 
@@ -50,21 +51,38 @@ void ui_text_init(ui_text_t opts, const char *text, ui_text_bounds_t *extents) {
   cairo_font_options_destroy(font_options);
 }
 
-void ui_text_commit(double x, double y, const char *text) {
+void ui_text_commit(ui_txt_t opts, double x, double y,
+                    const ui_txt_bounds_t *bounds, const char *text) {
   assert(cairo && "cairo must be non-null");
   assert(text && "text must be non-null");
+  assert(bounds && "bounds must be non-null");
 
-  cairo_move_to(cairo, x, y);
+  double relx = x;
+  switch (opts.align) {
+  case UI_TXT_ALIGN_LEFT:
+    relx = x;
+    break;
+  case UI_TXT_ALIGN_CENTER:
+    relx = x - bounds->width / 2;
+    break;
+  case UI_TXT_ALIGN_RIGHT:
+    relx = x - bounds->width;
+    break;
+  default:
+    assert(false && "unreacheable");
+  }
+
+  cairo_move_to(cairo, relx, y);
   cairo_show_text(cairo, text);
 }
 
-void ui_text(double x, double y, ui_text_t opts, const char *text) {
+void ui_text(ui_txt_t opts, double x, double y, const char *text) {
   assert(cairo && "cairo must be non-null");
   assert(text && "text must be non-null");
 
-  ui_text_bounds_t r;
+  ui_txt_bounds_t r;
   ui_text_init(opts, text, &r);
-  ui_text_commit(x, y, text);
+  ui_text_commit(opts, x, y, &r, text);
 }
 
 void ui_rect(double x, double y, double w, double h, ui_color_t c) {
@@ -73,28 +91,29 @@ void ui_rect(double x, double y, double w, double h, ui_color_t c) {
   cairo_fill(cairo);
 }
 
-void ui_btn(double x, double y, double w, double h, ui_btn_t opts,
+void ui_btn(ui_btn_t opts, double x, double y, double w, double h,
             const char *text, const char *icon, ui_btn_status_t status) {
   double hspacing = 16;
 
   ui_rect(x, y, w, h, opts.color[status].bg);
 
-  ui_text_t text_opts = {
+  ui_txt_t text_opts = {
       .color = opts.color[status].fg,
       .size = 20,
       .family = opts.icon_family,
       .weight = CAIRO_FONT_WEIGHT_NORMAL,
+      .align = UI_TXT_ALIGN_LEFT,
   };
 
-  ui_text_bounds_t bounds;
+  ui_txt_bounds_t bounds;
 
   ui_text_init(text_opts, icon, &bounds);
   double icony = y + h / 2 - bounds.y_bearing - bounds.height / 2;
-  ui_text_commit(x + hspacing, icony, icon);
+  ui_text_commit(text_opts, x + hspacing, icony, &bounds, icon);
 
   text_opts.family = opts.text_family;
   double labelx = x + hspacing + bounds.width + hspacing;
   ui_text_init(text_opts, text, &bounds);
   double labely = y + h / 2 - bounds.y_bearing - bounds.height / 2;
-  ui_text_commit(labelx, labely, text);
+  ui_text_commit(text_opts, labelx, labely, &bounds, text);
 }

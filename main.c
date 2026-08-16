@@ -3,6 +3,7 @@
 #include "src/log.h"
 #include "src/result.h"
 #include "src/shell.h"
+#include "src/spawn.h"
 #include "src/ui.h"
 #include <assert.h>
 #include <cairo/cairo.h>
@@ -17,7 +18,8 @@
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
 
-static app_state_t state = {.option = APP_OPTION_LOCK};
+static app_state_t state = {.option = APP_OPTION_LOCK,
+                            .status = APP_STATUS_PRISTINE};
 
 static inline int clamp(int x, int min, int max) {
   assert(min < max && "min should be less than max");
@@ -30,7 +32,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     return;
   }
 
-  ui_init(*ctx, 0x00000099);
+  ui_init(*ctx, 0x00000088);
   double vspace = 24;
   double hspace = 36;
   double nbuttons = 5;
@@ -54,16 +56,31 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   double framey = (double)h / 2 - frameh / 2;
   double buttony = framey + headery + headerh;
 
-  ui_text_t opts = {
+  ui_rect(framex, framey, framew, frameh, 0x282c34ff);
+
+  ui_txt_t txt_opts = {
       .color = 0xeaeaeaff,
       .size = 28,
       .family = "Noto Sans",
       .weight = CAIRO_FONT_WEIGHT_BOLD,
+      .align = UI_TXT_ALIGN_LEFT,
   };
-  ui_text(framex + hspace, framey + vspace + 24, opts, "End Session");
-  opts.size = 14;
-  opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
-  ui_text(framex + hspace, framey + vspace + 48, opts, "Select an option");
+  ui_text(txt_opts, framex + hspace, framey + vspace + 24, "End Session");
+
+  txt_opts.size = 16;
+  double messagey = framey + vspace + 48;
+  if (state.status == APP_STATUS_ERRORED) {
+    txt_opts.color = 0xff6b6bff;
+    txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
+
+    char msg[64];
+    sprintf(msg, "%s failed. See logs for details.",
+            APP_OPTION_LABEL[state.option]);
+    ui_text(txt_opts, framex + hspace, messagey, msg);
+  } else {
+    txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+    ui_text(txt_opts, framex + hspace, messagey, "Select an option");
+  }
 
   ui_btn_t btn_opts = {
       .icon_family = "FontAwesome",
@@ -87,21 +104,24 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       btn_status = UI_BTN_STATUS_SELECTED;
     }
 
-    ui_btn(btnx, btny, btnw, btnh, btn_opts, label, icon, btn_status);
+    ui_btn(btn_opts, btnx, btny, btnw, btnh, label, icon, btn_status);
   }
 
-  ui_text_bounds_t bounds;
-  opts.size = 12;
-  const char *footer = "Arrows to move · Enter to select · Esc to cancel";
-  ui_text_init(opts, footer, &bounds);
-  ui_text_commit(framex + framew / 2 - bounds.width / 2,
-                 framey + footery_relative + 8, footer);
+  txt_opts.size = 14;
+  txt_opts.color = 0xeaeaeaff;
+  txt_opts.align = UI_TXT_ALIGN_CENTER;
+  txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+  const char *footer = "Arrows to move · Enter to select · Esc to exit";
+  ui_text(txt_opts, framex + framew / 2, framey + footery_relative + 16,
+          footer);
 }
 
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   log_debug("received event %d, key %d", evt, key);
   if (key == SHL_KEY_UNKNOWN || evt == SHL_KBD_EVENT_KEYUP)
     return false;
+
+  state.status = APP_STATUS_PRISTINE;
 
   if (key == SHL_KEY_EXIT)
     exit(0);
@@ -121,24 +141,10 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   }
 
   if (key == SHL_KEY_SELECT && evt == SHL_KBD_EVENT_KEYDOWN) {
-    char *cmd = strdup(APP_OPTION_CMD[state.option]);
-    char *args[64];
-    size_t nargs = 0;
-
-    char *arg;
-    char *arg0 = strtok(cmd, " ");
-    args[nargs++] = arg0;
-
-    while (nargs < sizeof(args) - 1 && (arg = strtok(NULL, " "))) {
-      args[nargs] = arg;
-      nargs++;
-    }
-    args[nargs] = NULL;
-
-    if (execvp(arg0, args) < 0) {
-      log_error("cannot run selected command: %s", strerror(errno));
-      exit(1);
-    }
+    if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
+      exit(0);
+    state.status = APP_STATUS_ERRORED;
+    return true;
   }
 
   log_info("unhandled keyboard event %d, key %d", evt, key);

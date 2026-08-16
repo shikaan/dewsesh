@@ -3,13 +3,17 @@
 typedef enum {
   OK,
   ERROR,
-  
+
   ERR_CTX,
   ERR_CTX_ALLOCATION,
   ERR_CTX_CAIRO,
   ERR_CTX_MISSING_BUFFER,
   ERR_CTX_BUFFER_MISMATCH,
-  
+
   ERR_SHL_WAYLAND,
+
+  ERR_SPW_PIPE,
+  ERR_SPW_EXEC,
+
   RESULTS
 } result_t;
