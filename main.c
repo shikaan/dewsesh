@@ -1,10 +1,11 @@
+#include "src/app.h"
 #include "src/ctx.h"
 #include "src/log.h"
 #include "src/result.h"
 #include "src/shell.h"
 #include "src/ui.h"
+#include <assert.h>
 #include <cairo/cairo.h>
-#include <signal.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -14,7 +15,14 @@
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
 
-static void draw_frame(uint32_t w, uint32_t h, ctx_t **ctx) {
+static app_state_t state = {.option = APP_OPTION_LOCK};
+
+static inline int clamp(int x, int min, int max) {
+  assert(min < max && "min should be less than max");
+  return x < min ? min : (x >= max ? max - 1 : x);
+}
+
+static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   result_t r = ctx_get(w, h, ctx);
   if (r != OK) {
     return;
@@ -38,9 +46,9 @@ static void draw_frame(uint32_t w, uint32_t h, ctx_t **ctx) {
   double headery = vspace;
 
   double footerh = 48;
-  double footerrely = btnboxh * nbuttons + vspace + headerh;
+  double footery_relative = btnboxh * nbuttons + vspace + headerh;
 
-  double frameh = footerrely - pady + footerh + vspace;
+  double frameh = footery_relative - pady + footerh + vspace;
   double framey = (double)h / 2 - frameh / 2;
   double buttony = framey + headery + headerh;
 
@@ -65,38 +73,62 @@ static void draw_frame(uint32_t w, uint32_t h, ctx_t **ctx) {
           },
   };
 
-  ui_btn(btnx, buttony + btnboxh * 0, btnw, btnh, btn_opts, "Lock", "",
-         UI_BTN_STATUS_SELECTED);
-  ui_btn(btnx, buttony + btnboxh * 1, btnw, btnh, btn_opts, "Suspend", "",
-         UI_BTN_STATUS_NONE);
-  ui_btn(btnx, buttony + btnboxh * 2, btnw, btnh, btn_opts, "Hibernate", "",
-         UI_BTN_STATUS_NONE);
-  ui_btn(btnx, buttony + btnboxh * 3, btnw, btnh, btn_opts, "Restart", "",
-         UI_BTN_STATUS_NONE);
-  ui_btn(btnx, buttony + btnboxh * 4, btnw, btnh, btn_opts, "Shutdown", "",
-         UI_BTN_STATUS_NONE);
+  for (int i = 0; i < APP_OPTIONS; i++) {
+    double btny = buttony + btnboxh * i;
+    app_option_t option = (app_option_t)i;
+
+    const char *label = APP_OPTION_LABEL[option];
+    const char *icon = APP_OPTION_ICON[option];
+
+    ui_btn_status_t btn_status = UI_BTN_STATUS_NONE;
+    if (option == state.option) {
+      btn_status = UI_BTN_STATUS_SELECTED;
+    }
+
+    ui_btn(btnx, btny, btnw, btnh, btn_opts, label, icon, btn_status);
+  }
 
   ui_text_bounds_t bounds;
   opts.size = 12;
   const char *footer = "Arrows to move · Enter to select · Esc to cancel";
   ui_text_init(opts, footer, &bounds);
   ui_text_commit(framex + framew / 2 - bounds.width / 2,
-                 framey + footerrely + 8, footer);
+                 framey + footery_relative + 8, footer);
 }
 
-callbacks_t callbacks = {
-    .draw = draw_frame,
+static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
+  log_debug("received event %d, key %d", evt, key);
+  if (key == SHL_KEY_EXIT)
+    exit(0);
+
+  if (key == SHL_KEY_DOWN && evt == SHL_KBD_EVENT_KEYDOWN) {
+    app_option_t opt =
+        (app_option_t)clamp((int)state.option - 1, 0, APP_OPTIONS);
+    state.option = opt;
+    return true;
+  }
+
+  if (key == SHL_KEY_UP && evt == SHL_KBD_EVENT_KEYUP) {
+    app_option_t opt =
+        (app_option_t)clamp((int)state.option + 1, 0, APP_OPTIONS);
+    state.option = opt;
+    return true;
+  }
+
+  log_info("unhandled keyboard event %d, key %d", evt, key);
+  return false;
+}
+
+shl_callbacks_t callbacks = {
+    .draw = handle_draw,
+    .key = handle_key,
 };
 
 int main(void) {
   log_init(LOG_LEVEL_DEBUG);
 
-  shell_t *shl = NULL;
-  shl_init(callbacks, &shl);
-
-  // FIXME: Autoclose the app in 5s, to prevent the pkill dance.
-  signal(SIGALRM, exit);
-  alarm(5);
+  shl_shell_t *shl = NULL;
+  shl_create(callbacks, &shl);
 
   shl_run();
 

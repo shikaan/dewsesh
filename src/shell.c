@@ -6,11 +6,12 @@
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
 
-static shell_t shell = {0};
+static shl_shell_t shell = {0};
 
 static void registry_global(void *data, struct wl_registry *registry,
                             uint32_t name, const char *interface,
@@ -177,11 +178,39 @@ static void keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
 }
 static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                          uint32_t serial, uint32_t time, uint32_t key,
-                         uint32_t _key_state) {
+                         uint32_t state) {
   (void)data;
   (void)wl_keyboard;
-  log_debug("keyboard key event: serial=%u time=%u key=%u state=%u", serial,
-            time, key, _key_state);
+  (void)serial;
+  (void)time;
+
+  assert((state == 1 || state == 0) && "unrecognized key state");
+  shl_kbd_event_t evt =
+      state == 1 ? SHL_KBD_EVENT_KEYDOWN : SHL_KBD_EVENT_KEYUP;
+
+  shl_key_t evt_key;
+  switch (key) {
+  case 58: // escape
+  case 16: // q
+    evt_key = SHL_KEY_EXIT;
+    break;
+  case 108: // arrow up
+    evt_key = SHL_KEY_UP;
+    break;
+  case 103: // arrow down
+    evt_key = SHL_KEY_DOWN;
+    break;
+  case 28: // enter
+    evt_key = SHL_KEY_SELECT;
+    break;
+  default:
+    evt_key = SHL_KEY_UNKNOWN;
+    log_debug("unknown keyboard key %lu", key);
+  }
+
+  if (shell.callbacks.key(evt, evt_key)) {
+    shl_draw();
+  }
 }
 static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
                                uint32_t serial, uint32_t mods_depressed,
@@ -200,9 +229,10 @@ static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
   log_debug("keyboard repeat info event: rate=%d delay=%d", rate, delay);
 }
 
-result_t shl_init(callbacks_t cbs, shell_t **shl) {
+result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
   assert(shl && "destination shell must be provided");
   assert(cbs.draw && "draw callback must be non-null");
+  assert(cbs.key && "key callback must be non-null");
 
   display = wl_display_connect(NULL);
   if (!display) {

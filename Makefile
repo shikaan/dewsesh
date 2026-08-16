@@ -48,8 +48,10 @@ protocols/xdg-shell-protocol.c: protocols/xdg-shell-protocol.h
 		$(WAYLAND_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml $@
 
 protocols/xdg-shell-protocol.o: CFLAGS := -O2
+protocols/xdg-shell-protocol.o: protocols/xdg-shell-protocol.h \
+	protocols/xdg-shell-protocol.c
 
-protocols/wlr-layer-shell-unstable-v1.h: protocols/xdg-shell-protocol.h
+protocols/wlr-layer-shell-unstable-v1.h: protocols/xdg-shell-protocol.o
 	wayland-scanner client-header \
 		./protocols/wlr-layer-shell-unstable-v1.xml $@
 
@@ -58,6 +60,8 @@ protocols/wlr-layer-shell-unstable-v1.c: protocols/wlr-layer-shell-unstable-v1.h
 		./protocols/wlr-layer-shell-unstable-v1.xml $@
 
 protocols/wlr-layer-shell-unstable-v1.o: CFLAGS := -O2
+protocols/wlr-layer-shell-unstable-v1.o: protocols/wlr-layer-shell-unstable-v1.h \
+	protocols/wlr-layer-shell-unstable-v1.c
 
 src/ui.o: src/ctx.o
 src/ctx.o: src/log.o
@@ -66,8 +70,8 @@ src/shell.o: src/log.o src/ctx.o
 main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo) \
 	-isystem protocols
 main: LDLIBS += $(shell pkg-config --libs wayland-client cairo)
-main: src/log.o src/ctx.o src/shell.o src/ui.o \
-	protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o
+main: protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o \
+	src/log.o src/ctx.o src/shell.o src/ui.o	
 
 clean:
-	rm -f main *.o protocols/*.c protocols/*.h
+	rm -f main *.o src/*.o protocols/*.c protocols/*.h
