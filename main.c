@@ -6,9 +6,11 @@
 #include "src/ui.h"
 #include <assert.h>
 #include <cairo/cairo.h>
+#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <unistd.h>
@@ -98,7 +100,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   log_debug("received event %d, key %d", evt, key);
-  if (key == SHL_KEY_UNKNOWN)
+  if (key == SHL_KEY_UNKNOWN || evt == SHL_KBD_EVENT_KEYUP)
     return false;
 
   if (key == SHL_KEY_EXIT)
@@ -119,9 +121,24 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   }
 
   if (key == SHL_KEY_SELECT && evt == SHL_KBD_EVENT_KEYDOWN) {
-    const char* cmd = APP_OPTION_CMD[state.option];
-    log_debug("cmd: %s", cmd);
-    return false;
+    char *cmd = strdup(APP_OPTION_CMD[state.option]);
+    char *args[64];
+    size_t nargs = 0;
+
+    char *arg;
+    char *arg0 = strtok(cmd, " ");
+    args[nargs++] = arg0;
+
+    while (nargs < sizeof(args) - 1 && (arg = strtok(NULL, " "))) {
+      args[nargs] = arg;
+      nargs++;
+    }
+    args[nargs] = NULL;
+
+    if (execvp(arg0, args) < 0) {
+      log_error("cannot run selected command: %s", strerror(errno));
+      exit(1);
+    }
   }
 
   log_info("unhandled keyboard event %d, key %d", evt, key);
