@@ -93,27 +93,31 @@ void ui_rect(double x, double y, double w, double h, ui_color_t c) {
 
 void ui_btn(ui_btn_t opts, double x, double y, double w, double h,
             const char *text, const char *icon, ui_btn_status_t status) {
-  double hspacing = 16;
-
+  double gap = 16;
   ui_rect(x, y, w, h, opts.color[status].bg);
 
-  ui_txt_t text_opts = {
+  ui_txt_t icon_opts = {
       .color = opts.color[status].fg,
-      .size = 20,
+      .size = 28,
       .family = opts.icon_family,
       .weight = CAIRO_FONT_WEIGHT_NORMAL,
-      .align = UI_TXT_ALIGN_LEFT,
+      .align = UI_TXT_ALIGN_CENTER,
   };
+  ui_txt_t label_opts = icon_opts;
+  label_opts.family = opts.text_family;
+  label_opts.size = 16;
 
-  ui_txt_bounds_t bounds;
+  ui_txt_bounds_t icon_bounds, label_bounds;
+  ui_txt_init(icon_opts, icon, &icon_bounds);
+  ui_txt_init(label_opts, text, &label_bounds);
 
-  ui_txt_init(text_opts, icon, &bounds);
-  double icony = y + h / 2 - bounds.y_bearing - bounds.height / 2;
-  ui_txt_commit(text_opts, x + hspacing, icony, &bounds, icon);
+  double content_height = icon_bounds.height + gap + label_bounds.height;
+  double top = y + (h - content_height) / 2;
+  double icony = top - icon_bounds.y_bearing;
+  double labely = top + icon_bounds.height + gap - label_bounds.y_bearing;
 
-  text_opts.family = opts.text_family;
-  double labelx = x + hspacing + bounds.width + hspacing;
-  ui_txt_init(text_opts, text, &bounds);
-  double labely = y + h / 2 - bounds.y_bearing - bounds.height / 2;
-  ui_txt_commit(text_opts, labelx, labely, &bounds, text);
+  ui_txt_commit(label_opts, x + w / 2, labely, &label_bounds, text);
+
+  ui_txt_init(icon_opts, icon, &icon_bounds);
+  ui_txt_commit(icon_opts, x + w / 2, icony, &icon_bounds, icon);
 }

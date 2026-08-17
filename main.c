@@ -32,55 +32,41 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     return;
   }
 
-  ui_init(*ctx, 0x00000088);
+  ui_init(*ctx, 0x282c34cd);
   double vspace = 24;
-  double hspace = 36;
-  double nbuttons = APP_OPTIONS;
 
-  double framew = 400;
+  double btnh = 88;
+  double btnw = 144;
+  double pady = 48;
+  double padx = 64;
+  double btnboxh = btnh + pady;
+  double btnboxw = btnw + padx;
+  double nrows = 2;
+  int rowbtns = APP_OPTIONS / (int)nrows;
+
+  double framew = rowbtns * btnboxw - padx;
   double framex = (double)w / 2 - framew / 2;
 
-  double btnh = 48;
-  double btnw = framew - hspace * 2;
-  double btnx = framex + hspace;
-  double pady = 16;
-  double btnboxh = btnh + pady;
+  double btnx = framex;
 
-  double headerh = 80;
+  double headerh = 32;
   double headery = vspace;
 
   double footerh = 48;
-  double footery_relative = btnboxh * nbuttons + vspace + headerh;
+  double footery_relative = btnboxh * nrows + vspace + headerh;
 
   double frameh = footery_relative - pady + footerh + vspace;
   double framey = (double)h / 2 - frameh / 2;
-  double buttony = framey + headery + headerh;
-
-  ui_rect(framex, framey, framew, frameh, 0x282c34ff);
+  double btny = framey + headery + headerh;
 
   ui_txt_t txt_opts = {
       .color = 0xeaeaeaff,
-      .size = 28,
-      .family = "Noto Sans",
-      .weight = CAIRO_FONT_WEIGHT_BOLD,
-      .align = UI_TXT_ALIGN_LEFT,
+      .size = 16,
+      .family = "monospace",
+      .weight = CAIRO_FONT_WEIGHT_NORMAL,
+      .align = UI_TXT_ALIGN_CENTER,
   };
-  ui_txt(txt_opts, framex + hspace, framey + vspace + 24, "End Session");
-
-  txt_opts.size = 16;
-  double messagey = framey + vspace + 48;
-  if (state.status == APP_STATUS_ERRORED) {
-    txt_opts.color = 0xff6b6bff;
-    txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
-
-    char msg[64];
-    sprintf(msg, "%s failed. See logs for details.",
-            APP_OPTION_LABEL[state.option]);
-    ui_txt(txt_opts, framex + hspace, messagey, msg);
-  } else {
-    txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
-    ui_txt(txt_opts, framex + hspace, messagey, "Select an option");
-  }
+  ui_txt(txt_opts, framex + framew / 2, framey + vspace, "manuel@debian");
 
   ui_btn_t btn_opts = {
       .icon_family = "FontAwesome",
@@ -88,12 +74,14 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       .color =
           {
               [UI_BTN_STATUS_NONE] = {.bg = 0x00000000, .fg = 0xeaeaeaff},
-              [UI_BTN_STATUS_SELECTED] = {.bg = 0x82a2beff, .fg = 0xeaeaeaff},
+              [UI_BTN_STATUS_SELECTED] = {.bg = 0x82a2be80, .fg = 0xeaeaeaff},
           },
   };
 
   for (int i = 0; i < APP_OPTIONS; i++) {
-    double btny = buttony + btnboxh * i;
+    double x = btnx + btnboxw * (i % rowbtns);
+    double y = btny + btnboxh * (i >= rowbtns);
+
     app_option_t option = (app_option_t)i;
 
     const char *label = APP_OPTION_LABEL[option];
@@ -104,16 +92,29 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       btn_status = UI_BTN_STATUS_SELECTED;
     }
 
-    ui_btn(btn_opts, btnx, btny, btnw, btnh, label, icon, btn_status);
+    ui_btn(btn_opts, x, y, btnw, btnh, label, icon, btn_status);
   }
 
+  txt_opts.family = "sans-serif";
   txt_opts.size = 14;
-  txt_opts.color = 0xeaeaeaff;
   txt_opts.align = UI_TXT_ALIGN_CENTER;
-  txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
-  const char *footer = "Arrows to move · Enter to select · Esc to exit";
-  ui_txt(txt_opts, framex + framew / 2, framey + footery_relative + 16,
-          footer);
+
+  const char *status = "TAB Move · ENTER Confirm · ESC Cancel";
+  if (state.status == APP_STATUS_ERRORED) {
+    txt_opts.color = 0xff6b6bff;
+    txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
+
+    static char msg[64];
+    int l = sprintf(msg, "%s failed. See logs for details.",
+                    APP_OPTION_LABEL[state.option]);
+    msg[l] = 0;
+    status = msg;
+  } else {
+    txt_opts.color = 0xc4c8c6ff;
+    txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+  }
+
+  ui_txt(txt_opts, framex + framew / 2, framey + footery_relative + 16, status);
 }
 
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
