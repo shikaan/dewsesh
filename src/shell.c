@@ -314,9 +314,9 @@ void shl_run(void) {
     if (res < 0 && errno == EINTR)
       return;
 
-    if (res > 0 && (pfd.revents & POLLIN)) {
-      if (wl_display_dispatch(display) == -1)
-        return;
-    }
+    if (res > 0 && (pfd.revents & POLLIN) && wl_display_dispatch(display) == -1)
+      return;
+
+
   }
 }
