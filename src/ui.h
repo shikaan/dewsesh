@@ -29,12 +29,14 @@ void ui_init(ctx_t *c, ui_color_t background);
 
 void ui_set_source_color(ui_color_t color);
 
-void ui_text_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *bounds);
-void ui_text_commit(ui_txt_t opts, double x, double y,
+void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *bounds);
+void ui_txt_commit(ui_txt_t opts, double x, double y,
                     const ui_txt_bounds_t *bounds, const char *text);
-void ui_text(ui_txt_t opts, double x, double y, const char *text);
+void ui_txt(ui_txt_t opts, double x, double y, const char *text);
 
 void ui_rect(double x, double y, double w, double h, ui_color_t color);
+
+// Widgets
 
 typedef enum {
   UI_BTN_STATUS_NONE,

@@ -26,7 +26,7 @@ void ui_set_source_color(ui_color_t color) {
                         (color >> (0 * 8) & 0xFF) / 255.0);
 }
 
-void ui_text_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
+void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
   assert(extents && "rect must be non-null");
   assert(cairo && "cairo must be non-null");
 
@@ -51,8 +51,8 @@ void ui_text_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
   cairo_font_options_destroy(font_options);
 }
 
-void ui_text_commit(ui_txt_t opts, double x, double y,
-                    const ui_txt_bounds_t *bounds, const char *text) {
+void ui_txt_commit(ui_txt_t opts, double x, double y,
+                   const ui_txt_bounds_t *bounds, const char *text) {
   assert(cairo && "cairo must be non-null");
   assert(text && "text must be non-null");
   assert(bounds && "bounds must be non-null");
@@ -76,13 +76,13 @@ void ui_text_commit(ui_txt_t opts, double x, double y,
   cairo_show_text(cairo, text);
 }
 
-void ui_text(ui_txt_t opts, double x, double y, const char *text) {
+void ui_txt(ui_txt_t opts, double x, double y, const char *text) {
   assert(cairo && "cairo must be non-null");
   assert(text && "text must be non-null");
 
   ui_txt_bounds_t r;
-  ui_text_init(opts, text, &r);
-  ui_text_commit(opts, x, y, &r, text);
+  ui_txt_init(opts, text, &r);
+  ui_txt_commit(opts, x, y, &r, text);
 }
 
 void ui_rect(double x, double y, double w, double h, ui_color_t c) {
@@ -107,13 +107,13 @@ void ui_btn(ui_btn_t opts, double x, double y, double w, double h,
 
   ui_txt_bounds_t bounds;
 
-  ui_text_init(text_opts, icon, &bounds);
+  ui_txt_init(text_opts, icon, &bounds);
   double icony = y + h / 2 - bounds.y_bearing - bounds.height / 2;
-  ui_text_commit(text_opts, x + hspacing, icony, &bounds, icon);
+  ui_txt_commit(text_opts, x + hspacing, icony, &bounds, icon);
 
   text_opts.family = opts.text_family;
   double labelx = x + hspacing + bounds.width + hspacing;
-  ui_text_init(text_opts, text, &bounds);
+  ui_txt_init(text_opts, text, &bounds);
   double labely = y + h / 2 - bounds.y_bearing - bounds.height / 2;
-  ui_text_commit(text_opts, labelx, labely, &bounds, text);
+  ui_txt_commit(text_opts, labelx, labely, &bounds, text);
 }

@@ -65,7 +65,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       .weight = CAIRO_FONT_WEIGHT_BOLD,
       .align = UI_TXT_ALIGN_LEFT,
   };
-  ui_text(txt_opts, framex + hspace, framey + vspace + 24, "End Session");
+  ui_txt(txt_opts, framex + hspace, framey + vspace + 24, "End Session");
 
   txt_opts.size = 16;
   double messagey = framey + vspace + 48;
@@ -76,10 +76,10 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     char msg[64];
     sprintf(msg, "%s failed. See logs for details.",
             APP_OPTION_LABEL[state.option]);
-    ui_text(txt_opts, framex + hspace, messagey, msg);
+    ui_txt(txt_opts, framex + hspace, messagey, msg);
   } else {
     txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
-    ui_text(txt_opts, framex + hspace, messagey, "Select an option");
+    ui_txt(txt_opts, framex + hspace, messagey, "Select an option");
   }
 
   ui_btn_t btn_opts = {
@@ -112,7 +112,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   txt_opts.align = UI_TXT_ALIGN_CENTER;
   txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
   const char *footer = "Arrows to move · Enter to select · Esc to exit";
-  ui_text(txt_opts, framex + framew / 2, framey + footery_relative + 16,
+  ui_txt(txt_opts, framex + framew / 2, framey + footery_relative + 16,
           footer);
 }
 
