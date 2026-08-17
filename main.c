@@ -35,7 +35,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   ui_init(*ctx, 0x00000088);
   double vspace = 24;
   double hspace = 36;
-  double nbuttons = 5;
+  double nbuttons = APP_OPTIONS;
 
   double framew = 400;
   double framex = (double)w / 2 - framew / 2;
