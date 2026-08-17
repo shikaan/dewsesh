@@ -3,9 +3,12 @@
 #include "log.h"
 #include "result.h"
 #include <assert.h>
+#include <errno.h>
+#include <poll.h>
 #include <stddef.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/poll.h>
 #include <sys/types.h>
 #include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
@@ -159,8 +162,10 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
   (void)data;
   (void)wl_keyboard;
   (void)fd;
-  // noop
+  (void)format;
+  (void)size;
 }
+
 static void keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
                            uint32_t serial, struct wl_surface *wl_surface,
                            struct wl_array *keys) {
@@ -168,15 +173,17 @@ static void keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
   (void)wl_keyboard;
   (void)keys;
   (void)wl_surface;
-  // noop
+  (void)serial;
 }
+
 static void keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
                            uint32_t serial, struct wl_surface *wl_surface) {
   (void)data;
   (void)wl_keyboard;
   (void)wl_surface;
-  // noop
+  (void)serial;
 }
+
 static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                          uint32_t serial, uint32_t time, uint32_t key,
                          uint32_t state) {
@@ -295,7 +302,21 @@ void shl_draw(void) {
 }
 
 void shl_run(void) {
-  while (wl_display_dispatch(display) != -1) {
-    // event loop; configure event above does the actual drawing
+  int fd = wl_display_get_fd(display);
+
+  while (true) {
+    if (wl_display_flush(display) == -1)
+      return;
+
+    struct pollfd pfd = {.fd = fd, .events = POLLIN};
+
+    int res = poll(&pfd, 1, 16);
+    if (res < 0 && errno == EINTR)
+      return;
+
+    if (res > 0 && (pfd.revents & POLLIN)) {
+      if (wl_display_dispatch(display) == -1)
+        return;
+    }
   }
 }
