@@ -159,7 +159,7 @@ static void keyboard_keymap(void *data, struct wl_keyboard *wl_keyboard,
   (void)data;
   (void)wl_keyboard;
   (void)fd;
-  log_debug("keyboard keymap event: format=%u size=%u", format, size);
+  // noop
 }
 static void keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
                            uint32_t serial, struct wl_surface *wl_surface,
@@ -168,14 +168,14 @@ static void keyboard_enter(void *data, struct wl_keyboard *wl_keyboard,
   (void)wl_keyboard;
   (void)keys;
   (void)wl_surface;
-  log_debug("keyboard enter event: serial=%u", serial);
+  // noop
 }
 static void keyboard_leave(void *data, struct wl_keyboard *wl_keyboard,
                            uint32_t serial, struct wl_surface *wl_surface) {
   (void)data;
   (void)wl_keyboard;
   (void)wl_surface;
-  log_debug("keyboard leave event: serial=%u", serial);
+  // noop
 }
 static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
                          uint32_t serial, uint32_t time, uint32_t key,
@@ -279,7 +279,6 @@ result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
                                      NULL);
   wl_surface_commit(surface);
 
-  log_debug("commit", NULL);
   *shl = &shell;
   return OK;
 }
