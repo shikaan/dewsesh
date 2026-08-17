@@ -191,8 +191,7 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   shl_key_t evt_key;
   switch (key) {
   case 58: // escape
-  case 16: // q
-    evt_key = SHL_KEY_EXIT;
+    evt_key = SHL_KEY_CANCEL;
     break;
   case 108: // arrow up
     evt_key = SHL_KEY_UP;
@@ -200,8 +199,14 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
   case 103: // arrow down
     evt_key = SHL_KEY_DOWN;
     break;
+  case 105: // arrow left
+    evt_key = SHL_KEY_LEFT;
+    break;
+  case 106: // arrow right
+    evt_key = SHL_KEY_RIGHT;
+    break;
   case 28: // enter
-    evt_key = SHL_KEY_SELECT;
+    evt_key = SHL_KEY_CONFIRM;
     break;
   default:
     evt_key = SHL_KEY_UNKNOWN;

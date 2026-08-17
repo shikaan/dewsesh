@@ -8,8 +8,10 @@ typedef enum {
   SHL_KEY_UNKNOWN,
   SHL_KEY_UP,
   SHL_KEY_DOWN,
-  SHL_KEY_SELECT,
-  SHL_KEY_EXIT,
+  SHL_KEY_LEFT,
+  SHL_KEY_RIGHT,
+  SHL_KEY_CONFIRM,
+  SHL_KEY_CANCEL,
 } shl_key_t;
 
 typedef enum {

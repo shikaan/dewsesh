@@ -20,11 +20,10 @@
 
 static app_state_t state = {.option = APP_OPTION_LOCK,
                             .status = APP_STATUS_PRISTINE};
+enum { BUTTONS_PER_ROW = 3, BUTTON_ROWS = APP_OPTIONS / BUTTONS_PER_ROW };
 
-static inline int clamp(int x, int min, int max) {
-  assert(min < max && "min should be less than max");
-  return x < min ? min : (x >= max ? max - 1 : x);
-}
+static inline int min(int x, int min) { return x < min ? min : x; }
+static inline int max(int x, int max) { return x > max ? max : x; }
 
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   result_t r = ctx_get(w, h, ctx);
@@ -32,30 +31,29 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     return;
   }
 
-  ui_init(*ctx, 0x282c34cd);
+  ui_init(*ctx, 0x282c34e6);
   double vspace = 24;
 
   double btnh = 88;
   double btnw = 144;
-  double pady = 48;
-  double padx = 64;
-  double btnboxh = btnh + pady;
-  double btnboxw = btnw + padx;
-  double nrows = 2;
-  int rowbtns = APP_OPTIONS / (int)nrows;
+  double btnpady = 48;
+  double btnpadx = 64;
+  double btnboxh = btnh + btnpady;
+  double btnboxw = btnw + btnpadx;
+  double nbtnrows = (double)BUTTON_ROWS;
 
-  double framew = rowbtns * btnboxw - padx;
+  double framew = (double)BUTTONS_PER_ROW * btnboxw - btnpadx;
   double framex = (double)w / 2 - framew / 2;
 
   double btnx = framex;
 
-  double headerh = 32;
+  double headerh = 48;
   double headery = vspace;
 
   double footerh = 48;
-  double footery_relative = btnboxh * nrows + vspace + headerh;
+  double footery_relative = btnboxh * nbtnrows + vspace + headerh;
 
-  double frameh = footery_relative - pady + footerh + vspace;
+  double frameh = footery_relative - btnpady + footerh + vspace;
   double framey = (double)h / 2 - frameh / 2;
   double btny = framey + headery + headerh;
 
@@ -79,8 +77,8 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   };
 
   for (int i = 0; i < APP_OPTIONS; i++) {
-    double x = btnx + btnboxw * (i % rowbtns);
-    double y = btny + btnboxh * (i >= rowbtns);
+    double x = btnx + btnboxw * (i % BUTTONS_PER_ROW);
+    double y = btny + btnboxh * (i >= BUTTONS_PER_ROW);
 
     app_option_t option = (app_option_t)i;
 
@@ -99,7 +97,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   txt_opts.size = 14;
   txt_opts.align = UI_TXT_ALIGN_CENTER;
 
-  const char *status = "TAB Move · ENTER Confirm · ESC Cancel";
+  const char *status = "ARROWS Move · ENTER Confirm · ESC Cancel";
   if (state.status == APP_STATUS_ERRORED) {
     txt_opts.color = 0xff6b6bff;
     txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
@@ -124,28 +122,34 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
 
   state.status = APP_STATUS_PRISTINE;
 
-  if (key == SHL_KEY_EXIT)
-    exit(0);
-
-  if (key == SHL_KEY_DOWN && evt == SHL_KBD_EVENT_KEYDOWN) {
-    app_option_t opt =
-        (app_option_t)clamp((int)state.option - 1, 0, APP_OPTIONS);
-    state.option = opt;
-    return true;
-  }
-
-  if (key == SHL_KEY_UP && evt == SHL_KBD_EVENT_KEYDOWN) {
-    app_option_t opt =
-        (app_option_t)clamp((int)state.option + 1, 0, APP_OPTIONS);
-    state.option = opt;
-    return true;
-  }
-
-  if (key == SHL_KEY_SELECT && evt == SHL_KBD_EVENT_KEYDOWN) {
-    if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
+  if (evt == SHL_KBD_EVENT_KEYDOWN) {
+    if (key == SHL_KEY_CANCEL)
       exit(0);
-    state.status = APP_STATUS_ERRORED;
-    return true;
+
+    int delta = 0;
+    if (key == SHL_KEY_DOWN)
+      delta = -BUTTONS_PER_ROW;
+    else if (key == SHL_KEY_UP)
+      delta = BUTTONS_PER_ROW;
+    else if (key == SHL_KEY_LEFT)
+      delta = -1;
+    else if (key == SHL_KEY_RIGHT)
+      delta = 1;
+
+    if (delta != 0) {
+      int opt = (int)state.option + delta;
+      if (opt >= 0 && opt < APP_OPTIONS)
+        state.option = (app_option_t)opt;
+      return true;
+    }
+
+    if (key == SHL_KEY_CONFIRM) {
+      if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
+        exit(0);
+
+      state.status = APP_STATUS_ERRORED;
+      return true;
+    }
   }
 
   log_info("unhandled keyboard event %d, key %d", evt, key);
