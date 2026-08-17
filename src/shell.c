@@ -7,6 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
+#include <wayland-client-core.h>
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>

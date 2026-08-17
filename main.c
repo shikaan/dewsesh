@@ -26,6 +26,8 @@ static inline int min(int x, int min) { return x < min ? min : x; }
 static inline int max(int x, int max) { return x > max ? max : x; }
 
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
+  static char msg[128];
+
   result_t r = ctx_get(w, h, ctx);
   if (r != OK) {
     return;
@@ -66,51 +68,84 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   };
   ui_txt(txt_opts, framex + framew / 2, framey + vspace, "manuel@debian");
 
-  ui_btn_t btn_opts = {
-      .icon_family = "FontAwesome",
-      .text_family = "Noto Sans",
-      .color =
-          {
-              [UI_BTN_STATUS_NONE] = {.bg = 0x00000000, .fg = 0xeaeaeaff},
-              [UI_BTN_STATUS_SELECTED] = {.bg = 0x82a2be80, .fg = 0xeaeaeaff},
-          },
-  };
+  if (state.status == APP_STATUS_INHIBIT) {
+    txt_opts.size = 48;
+    txt_opts.family = "sans-seif";
+    txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
+    txt_opts.align = UI_TXT_ALIGN_CENTER;
 
-  for (int i = 0; i < APP_OPTIONS; i++) {
-    double x = btnx + btnboxw * (i % BUTTONS_PER_ROW);
-    double y = btny + btnboxh * (i >= BUTTONS_PER_ROW);
+    sprintf(msg, "%s...", APP_OPTION_MSG[state.option]);
 
-    app_option_t option = (app_option_t)i;
+    ui_txt_t sub_opts = txt_opts;
+    sub_opts.size = 16;
+    sub_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+    const char *submsg = APP_OPTION_COUNTDOWN[state.option];
 
-    const char *label = APP_OPTION_LABEL[option];
-    const char *icon = APP_OPTION_ICON[option];
+    ui_txt_bounds_t msg_bounds, sub_bounds;
+    ui_txt_init(txt_opts, msg, &msg_bounds);
+    ui_txt_init(sub_opts, submsg, &sub_bounds);
 
-    ui_btn_status_t btn_status = UI_BTN_STATUS_NONE;
-    if (option == state.option) {
-      btn_status = UI_BTN_STATUS_SELECTED;
+    double gap = 16;
+    double gridh = nbtnrows * btnboxh - btnpady;
+    double content_height = msg_bounds.height + gap + sub_bounds.height;
+    double top = btny + (gridh - content_height) / 2;
+    double msgy = top - msg_bounds.y_bearing;
+    double suby = top + msg_bounds.height + gap - sub_bounds.y_bearing;
+
+    ui_txt_commit(sub_opts, framex + framew / 2, suby, &sub_bounds, submsg);
+    ui_txt_init(txt_opts, msg, &msg_bounds);
+    ui_txt_commit(txt_opts, framex + framew / 2, msgy, &msg_bounds, msg);
+  } else {
+    ui_btn_t btn_opts = {
+        .icon_family = "FontAwesome",
+        .text_family = "Noto Sans",
+        .color =
+            {
+                [UI_BTN_STATUS_NONE] = {.bg = 0x00000000, .fg = 0xeaeaeaff},
+                [UI_BTN_STATUS_SELECTED] = {.bg = 0x82a2be80, .fg = 0xeaeaeaff},
+            },
+    };
+
+    for (int i = 0; i < APP_OPTIONS; i++) {
+      double x = btnx + btnboxw * (i % BUTTONS_PER_ROW);
+      double y = btny + btnboxh * (i >= BUTTONS_PER_ROW);
+
+      app_option_t option = (app_option_t)i;
+
+      const char *label = APP_OPTION_LABEL[option];
+      const char *icon = APP_OPTION_ICON[option];
+
+      ui_btn_status_t btn_status = UI_BTN_STATUS_NONE;
+      if (option == state.option) {
+        btn_status = UI_BTN_STATUS_SELECTED;
+      }
+
+      ui_btn(btn_opts, x, y, btnw, btnh, label, icon, btn_status);
     }
-
-    ui_btn(btn_opts, x, y, btnw, btnh, label, icon, btn_status);
   }
 
   txt_opts.family = "sans-serif";
   txt_opts.size = 14;
   txt_opts.align = UI_TXT_ALIGN_CENTER;
 
-  const char *status = "ARROWS Move · ENTER Confirm · ESC Cancel";
+  const char *status = NULL;
   if (state.status == APP_STATUS_ERRORED) {
     txt_opts.color = 0xff6b6bff;
     txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
 
-    static char msg[64];
-    int l = sprintf(msg, "%s failed. See logs for details.",
-                    APP_OPTION_LABEL[state.option]);
-    msg[l] = 0;
+    sprintf(msg, "%s failed. See logs for details.",
+            APP_OPTION_LABEL[state.option]);
     status = msg;
+  } else if (state.status == APP_STATUS_INHIBIT) {
+    status = "ENTER Confirm · ESC Cancel";
+    txt_opts.color = 0xc4c8c6ff;
+    txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
   } else {
+    status = "ARROWS Move · ENTER Confirm · ESC Cancel";
     txt_opts.color = 0xc4c8c6ff;
     txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
   }
+  assert(status && "status must be defined");
 
   ui_txt(txt_opts, framex + framew / 2, framey + footery_relative + 16, status);
 }
