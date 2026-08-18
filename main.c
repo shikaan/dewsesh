@@ -8,7 +8,6 @@
 #include "src/ui.h"
 #include <assert.h>
 #include <cairo/cairo.h>
-#include <errno.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdlib.h>
