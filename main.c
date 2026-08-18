@@ -10,6 +10,7 @@
 #include <cairo/cairo.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
@@ -30,6 +31,8 @@ enum {
 
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   static char msg[128];
+  static char name[32];
+  static char host[32];
 
   result_t r = ctx_get(w, h, ctx);
   if (r != OK) {
@@ -69,7 +72,10 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       .weight = UI_TXT_WEIGHT_NORMAL,
       .align = UI_TXT_ALIGN_CENTER,
   };
-  ui_txt(txt_opts, framex + framew / 2, framey + vspace, "manuel@debian");
+  gethostname(host, sizeof(host));
+  getlogin_r(name, sizeof(name));
+  snprintf(msg, sizeof(msg), "%s@%s", name, host);
+  ui_txt(txt_opts, framex + framew / 2, framey + vspace, msg);
 
   if (state.status == APP_STATUS_INHIBIT) {
     txt_opts.size = 48;
