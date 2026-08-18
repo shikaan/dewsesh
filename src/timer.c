@@ -26,7 +26,7 @@ result_t tmr_timeout(uint64_t ms, tmr_callback_t callback, void *data,
 
   for (size_t i = 0; i < MAX_TIMERS; i++) {
     if (timers[i].callback == NULL) {
-      log_debug("scheduling action", NULL);
+      log_debug("scheduling timer %zu in %llu ms", i, ms);
       timers[i].callback = callback;
       timers[i].data = data;
       timers[i].expiry = now() + ms;
@@ -83,7 +83,7 @@ bool tmr_fire(void) {
   for (size_t i = 0; i < MAX_TIMERS; i++) {
     tmr_timer_t *timer = &timers[i];
     if (timer->callback && timer->expiry <= t) {
-      log_debug("firing timer", NULL);
+      log_debug("firing timer %zu", i);
       bool (*cb)(void *) = timer->callback;
       void *data = timer->data;
       // free the slot before invoking, in case cb re-arms a timer

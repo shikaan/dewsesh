@@ -117,6 +117,7 @@ static void layer_surface_closed(void *data,
                                  struct zwlr_layer_surface_v1 *surf) {
   (void)data;
   (void)surf;
+  log_info("layer surface closed by compositor, exiting", NULL);
   exit(0);
 }
 
@@ -221,7 +222,7 @@ static void keyboard_key(void *data, struct wl_keyboard *wl_keyboard,
     break;
   default:
     evt_key = SHL_KEY_UNKNOWN;
-    log_debug("unknown keyboard key %lu", key);
+    log_debug("unknown keyboard key %u", key);
   }
 
   if (shell.callbacks.key(evt, evt_key)) {
@@ -234,9 +235,11 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
                                uint32_t group) {
   (void)data;
   (void)wl_keyboard;
-  log_debug("keyboard modifiers event: serial=%u depressed=%u latched=%u "
-            "locked=%u group=%u",
-            serial, mods_depressed, mods_latched, mods_locked, group);
+  (void)serial;
+  (void)mods_depressed;
+  (void)mods_latched;
+  (void)mods_locked;
+  (void)group;
 }
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
                                  int32_t rate, int32_t delay) {
@@ -252,7 +255,7 @@ result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
 
   display = wl_display_connect(NULL);
   if (!display) {
-    log_error("failed to connecto to Wayland display", NULL);
+    log_error("failed to connect to Wayland display", NULL);
     return ERR_SHL_WAYLAND;
   }
 
@@ -300,6 +303,9 @@ void shl_draw(void) {
   if (!c)
     return;
 
+  // FIXME: check+log draw errors via a ctx_status() call instead of
+  // leaking cairo into shell.c (also reconsider the "ctx" name)
+
   wl_surface_attach(surface, c->wl.buffer, 0, 0);
   wl_surface_damage_buffer(surface, 0, 0, (int)c->width, (int)c->height);
   wl_surface_commit(surface);
@@ -309,8 +315,10 @@ result_t shl_run(void) {
   int fd = wl_display_get_fd(display);
 
   while (true) {
-    if (wl_display_flush(display) == -1)
+    if (wl_display_flush(display) == -1) {
+      log_error("wl_display_flush failed: %s", strerror(errno));
       return ERR_SHL_WAYLAND;
+    }
 
     struct pollfd pfd = {.fd = fd, .events = POLLIN};
 
@@ -318,11 +326,17 @@ result_t shl_run(void) {
     int deadline = tmr_next(&ms) == OK ? (int)ms : INT_MAX;
 
     int res = poll(&pfd, 1, deadline);
-    if (res < 0 && errno == EINTR)
+    if (res < 0) {
+      if (errno == EINTR)
+        continue;
+      log_error("poll failed: %s", strerror(errno));
       return ERR_SHL_POLL;
+    }
 
-    if (res > 0 && (pfd.revents & POLLIN) && wl_display_dispatch(display) == -1)
+    if (res > 0 && (pfd.revents & POLLIN) && wl_display_dispatch(display) == -1) {
+      log_error("wl_display_dispatch failed: %s", strerror(errno));
       return ERR_SHL_WAYLAND;
+    }
 
     if (res == 0 && tmr_fire()) {
       shl_draw();

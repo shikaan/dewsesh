@@ -30,10 +30,12 @@ result_t spw_launch(const char *command) {
   int fds[2];
 
   if (pipe(fds) < 0) {
+    log_error("cannot create pipe: %s", strerror(errno));
     return ERR_SPW_PIPE;
   }
 
   if (fcntl(fds[1], F_SETFD, FD_CLOEXEC) < 0) {
+    log_error("cannot set pipe close-on-exec: %s", strerror(errno));
     return ERR_SPW_PIPE;
   }
 

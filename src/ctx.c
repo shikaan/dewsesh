@@ -76,7 +76,7 @@ static result_t ctx_create(ctx_t *c, uint32_t w, uint32_t h,
 
   void *data = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if (data == MAP_FAILED) {
-    log_error("mmap failed: %s\n", strerror(errno));
+    log_error("mmap failed: %s", strerror(errno));
     close(fd);
     return ERR_CTX_ALLOCATION;
   }
@@ -142,11 +142,14 @@ result_t ctx_init(uint32_t w, uint32_t h, struct wl_shm *shm) {
 result_t ctx_get(uint32_t w, uint32_t h, ctx_t **ctx) {
   ctx_t *selected = pool[0].busy ? pool[1].busy ? NULL : &pool[1] : &pool[0];
   if (!selected) {
+    log_warn("no free %ux%u buffer to draw", w, h);
     *ctx = NULL;
     return ERR_CTX_NO_BUFFERS;
   }
 
   if (selected->height != h || selected->width != w) {
+    log_info("buffer size mismatch: have %ux%u, want %ux%u", selected->width,
+             selected->height, w, h);
     *ctx = NULL;
     return ERR_CTX_BUFFER_MISMATCH;
   }

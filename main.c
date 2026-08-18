@@ -171,9 +171,10 @@ static bool action(void *data) {
 }
 
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
-  log_debug("received event %d, key %d", evt, key);
   if (key == SHL_KEY_UNKNOWN || evt == SHL_KBD_EVENT_KEYUP)
     return false;
+
+  log_debug("received event %d, key %d", evt, key);
 
   if (evt == SHL_KBD_EVENT_KEYDOWN) {
     if (key == SHL_KEY_CANCEL) {
@@ -228,7 +229,7 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
     }
   }
 
-  log_info("unhandled keyboard event %d, key %d", evt, key);
+  log_debug("unhandled keyboard event %d, key %d", evt, key);
   return false;
 }
 
@@ -241,15 +242,14 @@ int main(int argc, char *const *argv) {
   cli_opts_t *cli_opts;
   cli_parse(argc, argv, &cli_opts);
 
-  log_init(cli_opts->debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERROR);
+  log_init(cli_opts->debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO);
   log_debug("cli options: configuration = '%s'",
             cli_opts->config ? cli_opts->config : "(nil)");
   log_debug("cli options: debug = %s", cli_opts->debug ? "true" : "false");
 
   shl_shell_t *shl = NULL;
-  shl_create(callbacks, &shl);
+  if (shl_create(callbacks, &shl) != OK)
+    return 1;
 
-  shl_run();
-
-  return 0;
+  return shl_run() == OK ? 0 : 1;
 }
