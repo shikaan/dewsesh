@@ -37,7 +37,9 @@ void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
 
   cairo_set_font_options(cairo, font_options);
   cairo_select_font_face(cairo, opts.family, CAIRO_FONT_SLANT_NORMAL,
-                         opts.weight);
+                         opts.weight == UI_TXT_WEIGHT_BOLD
+                             ? CAIRO_FONT_WEIGHT_BOLD
+                             : CAIRO_FONT_WEIGHT_NORMAL);
   cairo_set_font_size(cairo, opts.size);
   ui_set_source_color(opts.color);
 
@@ -100,7 +102,7 @@ void ui_btn(ui_btn_t opts, double x, double y, double w, double h,
       .color = opts.color[status].fg,
       .size = 28,
       .family = opts.icon_family,
-      .weight = CAIRO_FONT_WEIGHT_NORMAL,
+      .weight = UI_TXT_WEIGHT_NORMAL,
       .align = UI_TXT_ALIGN_CENTER,
   };
   ui_txt_t label_opts = icon_opts;

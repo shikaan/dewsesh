@@ -1,7 +1,6 @@
 #pragma once
 
 #include "ctx.h"
-#include <cairo/cairo.h>
 #include <stdint.h>
 
 typedef uint32_t ui_color_t;
@@ -12,11 +11,16 @@ typedef enum {
   UI_TXT_ALIGN_RIGHT,
 } ui_txt_align_t;
 
+typedef enum {
+  UI_TXT_WEIGHT_NORMAL,
+  UI_TXT_WEIGHT_BOLD,
+} ui_txt_weight_t;
+
 typedef struct {
   ui_color_t color;
   double size;
   const char *family;
-  cairo_font_weight_t weight;
+  ui_txt_weight_t weight;
   ui_txt_align_t align;
 } ui_txt_t;
 

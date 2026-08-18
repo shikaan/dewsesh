@@ -9,17 +9,17 @@ typedef enum {
 } app_status_t;
 
 #define APP_OPTIONS_X                                                          \
-  X(LOCK, "Lock", "Locking", "", "dewlock", "The system will lock in 10s.") \
+  X(LOCK, "Lock", "Locking", "", "dewlock", "The system will lock in 10s") \
   X(SUSPEND, "Suspend", "Suspending", "",                                   \
-    "systemctl suspend-then-hibernate", "The system will suspend in 10s.")     \
+    "systemctl suspend-then-hibernate", "The system will suspend in 10s")     \
   X(HIBERNATE, "Hibernate", "Hibernating", "", "systemctl hibernate",       \
-    "The system will hibernate in 10s.")                                       \
+    "The system will hibernate in 10s")                                       \
   X(LOGOUT, "Logout", "Logging out", "", "loginctl terminate-session",      \
-    "The system will log you out in 10s.")                                     \
+    "The system will log you out in 10s")                                     \
   X(RESTART, "Restart", "Restarting", "", "systemctl reboot",               \
-    "The system will restart in 10s.")                                         \
+    "The system will restart in 10s")                                         \
   X(SHUTDOWN, "Shutdown", "Shutting down", "", "systemctl poweroff",        \
-    "The system will shut down in 10s.")
+    "The system will shut down in 10s")
 
 #define X(name, label, msg, icon, cmd, countdown) APP_OPTION_##name,
 typedef enum { APP_OPTIONS_X APP_OPTIONS } app_option_t;

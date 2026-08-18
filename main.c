@@ -66,7 +66,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       .color = 0xeaeaeaff,
       .size = 16,
       .family = "monospace",
-      .weight = CAIRO_FONT_WEIGHT_NORMAL,
+      .weight = UI_TXT_WEIGHT_NORMAL,
       .align = UI_TXT_ALIGN_CENTER,
   };
   ui_txt(txt_opts, framex + framew / 2, framey + vspace, "manuel@debian");
@@ -74,21 +74,21 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   if (state.status == APP_STATUS_INHIBIT) {
     txt_opts.size = 48;
     txt_opts.family = "sans-seif";
-    txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
+    txt_opts.weight = UI_TXT_WEIGHT_BOLD;
     txt_opts.align = UI_TXT_ALIGN_CENTER;
 
     sprintf(msg, "%s...", APP_OPTION_MSG[state.option]);
 
     ui_txt_t sub_opts = txt_opts;
     sub_opts.size = 16;
-    sub_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+    sub_opts.weight = UI_TXT_WEIGHT_NORMAL;
     const char *submsg = APP_OPTION_COUNTDOWN[state.option];
 
     ui_txt_bounds_t msg_bounds, sub_bounds;
     ui_txt_init(txt_opts, msg, &msg_bounds);
     ui_txt_init(sub_opts, submsg, &sub_bounds);
 
-    double gap = 16;
+    double gap = 24;
     double gridh = nbtnrows * btnboxh - btnpady;
     double content_height = msg_bounds.height + gap + sub_bounds.height;
     double top = btny + (gridh - content_height) / 2;
@@ -134,7 +134,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   const char *status = NULL;
   if (state.status == APP_STATUS_ERRORED) {
     txt_opts.color = 0xff6b6bff;
-    txt_opts.weight = CAIRO_FONT_WEIGHT_BOLD;
+    txt_opts.weight = UI_TXT_WEIGHT_BOLD;
 
     sprintf(msg, "%s failed. See logs for details.",
             APP_OPTION_LABEL[state.option]);
@@ -142,11 +142,11 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   } else if (state.status == APP_STATUS_INHIBIT) {
     status = "ENTER Confirm · ESC Cancel";
     txt_opts.color = 0xc4c8c6ff;
-    txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+    txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   } else {
     status = "ARROWS Move · ENTER Confirm · ESC Cancel";
     txt_opts.color = 0xc4c8c6ff;
-    txt_opts.weight = CAIRO_FONT_WEIGHT_NORMAL;
+    txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   }
   assert(status && "status must be defined");
 
