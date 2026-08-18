@@ -69,7 +69,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       .color = 0xeaeaeaff,
       .size = 16,
       .family = "monospace",
-      .weight = UI_TXT_WEIGHT_NORMAL,
+      .weight = UI_TXT_WEIGHT_BOLD,
       .align = UI_TXT_ALIGN_CENTER,
   };
   gethostname(host, sizeof(host));
@@ -133,12 +133,12 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     }
   }
 
-  txt_opts.family = "sans-serif";
-  txt_opts.size = 14;
+  txt_opts.size = 16;
   txt_opts.align = UI_TXT_ALIGN_CENTER;
 
   const char *status = NULL;
   if (state.status == APP_STATUS_ERRORED) {
+    txt_opts.family = "sans-serif";
     txt_opts.color = 0xff6b6bff;
     txt_opts.weight = UI_TXT_WEIGHT_BOLD;
 
@@ -147,10 +147,12 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     status = msg;
   } else if (state.status == APP_STATUS_INHIBIT) {
     status = "ENTER Confirm · ESC Cancel";
+    txt_opts.family = "monospace",
     txt_opts.color = 0xc4c8c6ff;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   } else {
     status = "ARROWS Move · ENTER Confirm · ESC Cancel";
+    txt_opts.family = "monospace",
     txt_opts.color = 0xc4c8c6ff;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   }
