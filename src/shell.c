@@ -282,6 +282,7 @@ result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
                                        ZWLR_LAYER_SURFACE_V1_ANCHOR_LEFT |
                                        ZWLR_LAYER_SURFACE_V1_ANCHOR_RIGHT);
   zwlr_layer_surface_v1_set_size(layer_surface, 0, 0);
+  zwlr_layer_surface_v1_set_exclusive_zone(layer_surface, -1);
   zwlr_layer_surface_v1_set_keyboard_interactivity(
       layer_surface, ZWLR_LAYER_SURFACE_V1_KEYBOARD_INTERACTIVITY_EXCLUSIVE);
 
