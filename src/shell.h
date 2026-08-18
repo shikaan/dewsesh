@@ -32,4 +32,4 @@ typedef struct {
 result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl);
 
 void shl_draw(void);
-void shl_run(void);
+result_t shl_run(void);

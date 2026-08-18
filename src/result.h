@@ -12,6 +12,7 @@ typedef enum {
 
   ERR_SHL,
   ERR_SHL_WAYLAND,
+  ERR_SHL_POLL,
 
   ERR_SPW,
   ERR_SPW_PIPE,

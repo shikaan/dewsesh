@@ -5,6 +5,7 @@
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
+#include <string.h>
 #include <time.h>
 
 enum { MAX_TIMERS = 16 };
@@ -18,16 +19,17 @@ static uint64_t now(void) {
   return (uint64_t)ts.tv_sec * 1000 + (uint64_t)ts.tv_nsec / 1000000;
 }
 
-result_t tmr_timeout(uint64_t ms, void (*cb)(void *), void *data,
+result_t tmr_timeout(uint64_t ms, tmr_callback_t callback, void *data,
                      tmr_timer_t **timer) {
-  assert(cb && "callback must be defined");
+  assert(callback && "callback must be defined");
   assert(ms > 0 && "ms must be non-zero");
 
   for (size_t i = 0; i < MAX_TIMERS; i++) {
-    if (timers[i].cb == NULL) {
-      timers[i].cb = cb;
+    if (timers[i].callback == NULL) {
+      log_debug("scheduling action", NULL);
+      timers[i].callback = callback;
       timers[i].data = data;
-      timers[i].exp = now() + ms;
+      timers[i].expiry = now() + ms;
       ntimers++;
       *timer = &timers[i];
       return OK;
@@ -40,10 +42,10 @@ result_t tmr_timeout(uint64_t ms, void (*cb)(void *), void *data,
 
 result_t tmr_cancel(tmr_timer_t *timer) {
   for (size_t i = 0; i < MAX_TIMERS; i++) {
-    if (&timers[i] == timer && timer->cb) {
-      timer->cb = NULL;
+    if (&timers[i] == timer && timer->callback) {
+      timer->callback = NULL;
       timer->data = NULL;
-      timer->exp = 0;
+      timer->expiry = 0;
       ntimers--;
       return OK;
     }
@@ -52,38 +54,44 @@ result_t tmr_cancel(tmr_timer_t *timer) {
   log_error("cannot cancel unregistered timer", NULL);
   return ERR_TMR_NOT_FOUND;
 }
-
 result_t tmr_next(uint64_t *ms) {
-  if (ntimers == 0)
+  if (ntimers == 0) {
+    *ms = 0;
     return ERR_TMR_NO_TIMERS;
+  }
 
   const uint64_t t = now();
   uint64_t min = UINT64_MAX;
 
   for (size_t i = 0; i < MAX_TIMERS; i++) {
-    if (timers[i].cb && timers[i].exp < min) {
-      min = timers[i].exp;
+    if (timers[i].callback && timers[i].expiry < min) {
+      min = timers[i].expiry;
     }
   }
 
   *ms = min > t ? min - t : 0;
+  log_debug("next timer in %llu ms", *ms);
   return OK;
 }
 
-void tmr_fire(void) {
+bool tmr_fire(void) {
   if (ntimers == 0)
-    return;
+    return false;
 
   const uint64_t t = now();
+  bool result = false;
   for (size_t i = 0; i < MAX_TIMERS; i++) {
     tmr_timer_t *timer = &timers[i];
-    if (timer->cb && timer->exp <= t) {
-      void (*cb)(void *) = timer->cb;
+    if (timer->callback && timer->expiry <= t) {
+      log_debug("firing timer", NULL);
+      bool (*cb)(void *) = timer->callback;
       void *data = timer->data;
       // free the slot before invoking, in case cb re-arms a timer
-      timer->cb = NULL;
+      timer->callback = NULL;
       ntimers--;
-      cb(data);
+      result = result || cb(data);
     }
   }
+
+  return result;
 }

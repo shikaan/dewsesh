@@ -143,7 +143,7 @@ result_t ctx_get(uint32_t w, uint32_t h, ctx_t **ctx) {
   ctx_t *selected = pool[0].busy ? pool[1].busy ? NULL : &pool[1] : &pool[0];
   if (!selected) {
     *ctx = NULL;
-    return ERR_CTX_MISSING_BUFFER;
+    return ERR_CTX_NO_BUFFERS;
   }
 
   if (selected->height != h || selected->width != w) {

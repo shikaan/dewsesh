@@ -2,10 +2,13 @@
 #include "ctx.h"
 #include "log.h"
 #include "result.h"
+#include "timer.h"
 #include <assert.h>
 #include <errno.h>
+#include <limits.h>
 #include <poll.h>
 #include <stddef.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/poll.h>
@@ -301,22 +304,29 @@ void shl_draw(void) {
   wl_surface_commit(surface);
 }
 
-void shl_run(void) {
+result_t shl_run(void) {
   int fd = wl_display_get_fd(display);
 
   while (true) {
     if (wl_display_flush(display) == -1)
-      return;
+      return ERR_SHL_WAYLAND;
 
     struct pollfd pfd = {.fd = fd, .events = POLLIN};
 
-    int res = poll(&pfd, 1, 16);
+    uint64_t ms;
+    int deadline = tmr_next(&ms) == OK ? (int)ms : INT_MAX;
+
+    int res = poll(&pfd, 1, deadline);
     if (res < 0 && errno == EINTR)
-      return;
+      return ERR_SHL_POLL;
 
     if (res > 0 && (pfd.revents & POLLIN) && wl_display_dispatch(display) == -1)
-      return;
+      return ERR_SHL_WAYLAND;
 
-
+    if (res == 0 && tmr_fire()) {
+      shl_draw();
+    }
   }
+
+  return OK;
 }

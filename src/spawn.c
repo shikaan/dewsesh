@@ -26,6 +26,7 @@ static void exec(const char *command) {
 }
 
 result_t spw_launch(const char *command) {
+  log_debug("launching: %s", command);
   int fds[2];
 
   if (pipe(fds) < 0) {

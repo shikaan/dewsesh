@@ -4,6 +4,7 @@
 #include "src/result.h"
 #include "src/shell.h"
 #include "src/spawn.h"
+#include "src/timer.h"
 #include "src/ui.h"
 #include <assert.h>
 #include <cairo/cairo.h>
@@ -18,12 +19,15 @@
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
 
-static app_state_t state = {.option = APP_OPTION_LOCK,
-                            .status = APP_STATUS_PRISTINE};
-enum { BUTTONS_PER_ROW = 3, BUTTON_ROWS = APP_OPTIONS / BUTTONS_PER_ROW };
-
-static inline int min(int x, int min) { return x < min ? min : x; }
-static inline int max(int x, int max) { return x > max ? max : x; }
+static app_state_t state = {
+    .option = APP_OPTION_LOCK,
+    .status = APP_STATUS_PRISTINE,
+    .action = NULL,
+};
+enum {
+  BUTTONS_PER_ROW = 3,
+  BUTTON_ROWS = APP_OPTIONS / BUTTONS_PER_ROW,
+};
 
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   static char msg[128];
@@ -150,16 +154,32 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   ui_txt(txt_opts, framex + framew / 2, framey + footery_relative + 16, status);
 }
 
+static bool action(void *data) {
+  log_debug("launching option %d", state.option);
+  (void)data;
+  if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
+    exit(0);
+
+  state.status = APP_STATUS_ERRORED;
+  return true;
+}
+
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   log_debug("received event %d, key %d", evt, key);
   if (key == SHL_KEY_UNKNOWN || evt == SHL_KBD_EVENT_KEYUP)
     return false;
 
-  state.status = APP_STATUS_PRISTINE;
-
   if (evt == SHL_KBD_EVENT_KEYDOWN) {
-    if (key == SHL_KEY_CANCEL)
-      exit(0);
+    if (key == SHL_KEY_CANCEL) {
+      if (state.action && state.status == APP_STATUS_INHIBIT) {
+        tmr_cancel(state.action);
+        state.action = NULL;
+        state.status = APP_STATUS_PRISTINE;
+        return true;
+      } else {
+        exit(0);
+      }
+    }
 
     int delta = 0;
     if (key == SHL_KEY_DOWN)
@@ -172,6 +192,8 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
       delta = 1;
 
     if (delta != 0) {
+      // Reset status on movement
+      state.status = APP_STATUS_PRISTINE;
       int opt = (int)state.option + delta;
       if (opt >= 0 && opt < APP_OPTIONS)
         state.option = (app_option_t)opt;
@@ -179,11 +201,24 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
     }
 
     if (key == SHL_KEY_CONFIRM) {
-      if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
-        exit(0);
+      if (state.action && state.status == APP_STATUS_INHIBIT) {
+        tmr_cancel(state.action);
+        state.action = NULL;
+        return action(NULL);
+      } else {
 
-      state.status = APP_STATUS_ERRORED;
-      return true;
+        bool requires_inhibition = state.option == APP_OPTION_RESTART ||
+                                   state.option == APP_OPTION_SHUTDOWN ||
+                                   state.option == APP_OPTION_LOGOUT;
+        if (requires_inhibition) {
+          // FIXME: should we lock the state here?
+          tmr_timeout(10000, action, NULL, &state.action);
+          state.status = APP_STATUS_INHIBIT;
+          return true;
+        } else {
+          return action(NULL);
+        }
+      }
     }
   }
 
@@ -191,7 +226,7 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   return false;
 }
 
-shl_callbacks_t callbacks = {
+static shl_callbacks_t callbacks = {
     .draw = handle_draw,
     .key = handle_key,
 };
