@@ -1,4 +1,5 @@
 #include "src/app.h"
+#include "src/cli.h"
 #include "src/ctx.h"
 #include "src/log.h"
 #include "src/result.h"
@@ -147,13 +148,11 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     status = msg;
   } else if (state.status == APP_STATUS_INHIBIT) {
     status = "ENTER Confirm · ESC Cancel";
-    txt_opts.family = "monospace",
-    txt_opts.color = 0xc4c8c6ff;
+    txt_opts.family = "monospace", txt_opts.color = 0xc4c8c6ff;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   } else {
     status = "ARROWS Move · ENTER Confirm · ESC Cancel";
-    txt_opts.family = "monospace",
-    txt_opts.color = 0xc4c8c6ff;
+    txt_opts.family = "monospace", txt_opts.color = 0xc4c8c6ff;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   }
   assert(status && "status must be defined");
@@ -238,8 +237,14 @@ static shl_callbacks_t callbacks = {
     .key = handle_key,
 };
 
-int main(void) {
-  log_init(LOG_LEVEL_DEBUG);
+int main(int argc, char *const *argv) {
+  cli_opts_t *cli_opts;
+  cli_parse(argc, argv, &cli_opts);
+
+  log_init(cli_opts->debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_ERROR);
+  log_debug("cli options: configuration = '%s'",
+            cli_opts->config ? cli_opts->config : "(nil)");
+  log_debug("cli options: debug = %s", cli_opts->debug ? "true" : "false");
 
   shl_shell_t *shl = NULL;
   shl_create(callbacks, &shl);

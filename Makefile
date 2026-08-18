@@ -39,6 +39,9 @@ endif
 
 WAYLAND_PROTOCOLS_DIR := $(shell pkg-config --variable=pkgdatadir wayland-protocols)
 
+VERSION ?= '"v0.0.0"'
+SHA ?= '"dev"'
+
 protocols/xdg-shell-protocol.h:
 	wayland-scanner client-header \
 		$(WAYLAND_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml $@
@@ -63,6 +66,7 @@ protocols/wlr-layer-shell-unstable-v1.o: CFLAGS := -O2
 protocols/wlr-layer-shell-unstable-v1.o: protocols/wlr-layer-shell-unstable-v1.h \
 	protocols/wlr-layer-shell-unstable-v1.c
 
+src/cli:
 src/ui.o: src/ctx.o
 src/ctx.o: src/log.o
 src/timer.o: src/log.o
@@ -70,10 +74,10 @@ src/shell.o: src/log.o src/timer.o src/ctx.o
 src/spawn.o: src/log.o
 
 main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo) \
-	-isystem protocols
+	-isystem protocols -DVERSION='"$(VERSION)"' -DSHA='"$(SHA)"'
 main: LDLIBS += $(shell pkg-config --libs wayland-client cairo)
 main: protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o \
-	src/log.o src/ctx.o src/shell.o src/ui.o src/spawn.o src/timer.o	
+	src/log.o src/ctx.o src/shell.o src/ui.o src/spawn.o src/timer.o src/cli.o	
 
 clean:
 	rm -f main *.o src/*.o protocols/*.c protocols/*.h
