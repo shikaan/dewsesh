@@ -19,9 +19,22 @@ typedef enum {
   SHL_KBD_EVENT_KEYDOWN,
 } shl_kbd_event_t;
 
+typedef enum {
+  SHL_PTR_BTN_UNKNOWN,
+  SHL_PTR_BTN_LEFT,
+} shl_ptr_btn_t;
+
+typedef enum {
+  SHL_PTR_EVENT_MOVE,
+  SHL_PTR_EVENT_CLICK,
+} shl_ptr_event_t;
+
 typedef struct {
   void (*draw)(uint32_t w, uint32_t h, ctx_t **c);
   bool (*key)(shl_kbd_event_t evt, shl_key_t key);
+  // x and y are surface-local; wl_pointer.button carries no coordinates of its
+  // own, so a click reports the last position seen on enter or motion
+  bool (*pointer)(shl_ptr_event_t evt, shl_ptr_btn_t btn, double x, double y);
 } shl_callbacks_t;
 
 typedef struct {

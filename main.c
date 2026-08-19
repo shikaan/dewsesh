@@ -30,6 +30,11 @@ enum {
   BUTTON_ROWS = APP_OPTIONS / BUTTONS_PER_ROW,
 };
 
+typedef struct {
+  double x, y, w, h;
+} rect_t;
+static rect_t btn_hit_targets[APP_OPTIONS];
+
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   static char msg[128];
   static char name[32];
@@ -116,6 +121,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
             },
     };
 
+    memset(btn_hit_targets, 0, sizeof(btn_hit_targets));
     for (int i = 0; i < APP_OPTIONS; i++) {
       double x = btnx + btnboxw * (i % BUTTONS_PER_ROW);
       double y = btny + btnboxh * (i >= BUTTONS_PER_ROW);
@@ -131,6 +137,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
       }
 
       ui_btn(btn_opts, x, y, btnw, btnh, label, icon, btn_status);
+      btn_hit_targets[i] = (rect_t){.x = x, .y = y, .w = btnw, .h = btnh};
     }
   }
 
@@ -168,6 +175,26 @@ static bool action(void *data) {
 
   state.status = APP_STATUS_ERRORED;
   return true;
+}
+
+static bool confirm(void) {
+  if (state.action && state.status == APP_STATUS_INHIBIT) {
+    tmr_cancel(state.action);
+    state.action = NULL;
+    return action(NULL);
+  }
+
+  bool requires_inhibition = state.option == APP_OPTION_RESTART ||
+                             state.option == APP_OPTION_SHUTDOWN ||
+                             state.option == APP_OPTION_LOGOUT;
+  if (requires_inhibition) {
+    // FIXME: should we lock the state here?
+    tmr_timeout(10000, action, NULL, &state.action);
+    state.status = APP_STATUS_INHIBIT;
+    return true;
+  }
+
+  return action(NULL);
 }
 
 static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
@@ -208,24 +235,7 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
     }
 
     if (key == SHL_KEY_CONFIRM) {
-      if (state.action && state.status == APP_STATUS_INHIBIT) {
-        tmr_cancel(state.action);
-        state.action = NULL;
-        return action(NULL);
-      } else {
-
-        bool requires_inhibition = state.option == APP_OPTION_RESTART ||
-                                   state.option == APP_OPTION_SHUTDOWN ||
-                                   state.option == APP_OPTION_LOGOUT;
-        if (requires_inhibition) {
-          // FIXME: should we lock the state here?
-          tmr_timeout(10000, action, NULL, &state.action);
-          state.status = APP_STATUS_INHIBIT;
-          return true;
-        } else {
-          return action(NULL);
-        }
-      }
+      return confirm();
     }
   }
 
@@ -233,9 +243,35 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   return false;
 }
 
+static bool handle_pointer(shl_ptr_event_t evt, shl_ptr_btn_t btn, double x,
+                           double y) {
+  if (evt != SHL_PTR_EVENT_CLICK || btn != SHL_PTR_BTN_LEFT)
+    return false;
+
+  log_debug("received click at %.0fx%.0f", x, y);
+
+  for (int i = 0; i < APP_OPTIONS; i++) {
+    rect_t rect = btn_hit_targets[i];
+    if (rect.w <= 0 || rect.h <= 0)
+      continue; // no button drawn here
+
+    if (x < rect.x || x >= rect.x + rect.w)
+      continue;
+    if (y < rect.y || y >= rect.y + rect.h)
+      continue;
+
+    state.option = (app_option_t)i;
+    state.status = APP_STATUS_PRISTINE;
+    return confirm();
+  }
+
+  return false; // cliecked nowhere
+}
+
 static shl_callbacks_t callbacks = {
     .draw = handle_draw,
     .key = handle_key,
+    .pointer = handle_pointer,
 };
 
 int main(int argc, char *const *argv) {

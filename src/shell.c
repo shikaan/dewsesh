@@ -52,11 +52,45 @@ static void keyboard_modifiers(void *data, struct wl_keyboard *wl_keyboard,
 static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
                                  int32_t rate, int32_t delay);
 
+static void pointer_enter(void *data, struct wl_pointer *wl_pointer,
+                          uint32_t serial, struct wl_surface *s,
+                          wl_fixed_t surface_x, wl_fixed_t surface_y);
+static void pointer_leave(void *data, struct wl_pointer *wl_pointer,
+                          uint32_t serial, struct wl_surface *surface);
+
+static void pointer_motion(void *data, struct wl_pointer *wl_pointer,
+                           uint32_t time, wl_fixed_t surface_x,
+                           wl_fixed_t surface_y);
+
+static void pointer_button(void *data, struct wl_pointer *wl_pointer,
+                           uint32_t serial, uint32_t time, uint32_t button,
+                           uint32_t state);
+
+static void pointer_axis(void *data, struct wl_pointer *wl_pointer,
+                         uint32_t time, uint32_t axis, wl_fixed_t value);
+
+static void pointer_frame(void *data, struct wl_pointer *wl_pointer);
+
+static void pointer_axis_source(void *data, struct wl_pointer *wl_pointer,
+                                uint32_t axis_source);
+
+static void pointer_axis_stop(void *data, struct wl_pointer *wl_pointer,
+                              uint32_t time, uint32_t axis);
+
+static void pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer,
+                                  uint32_t axis, int32_t discrete);
+
 static struct wl_display *display = NULL;
 static struct wl_compositor *compositor = NULL;
 static struct wl_shm *shm = NULL;
 static struct zwlr_layer_shell_v1 *layer_shell = NULL;
 static struct wl_seat *seat = NULL;
+
+static struct wl_keyboard *keyboard = NULL;
+static struct wl_pointer *pointer = NULL;
+
+static double pointer_x = 0;
+static double pointer_y = 0;
 
 static struct wl_surface *surface;
 static struct zwlr_layer_surface_v1 *layer_surface;
@@ -86,6 +120,18 @@ static const struct wl_keyboard_listener keyboard_listener = {
     .key = keyboard_key,
     .modifiers = keyboard_modifiers,
     .repeat_info = keyboard_repeat_info,
+};
+
+static const struct wl_pointer_listener pointer_listener = {
+    .enter = pointer_enter,
+    .leave = pointer_leave,
+    .motion = pointer_motion,
+    .button = pointer_button,
+    .axis = pointer_axis,
+    .frame = pointer_frame,
+    .axis_source = pointer_axis_source,
+    .axis_stop = pointer_axis_stop,
+    .axis_discrete = pointer_axis_discrete,
 };
 
 static void layer_surface_configure(void *data,
@@ -149,9 +195,14 @@ static void registry_global_remove(void *data, struct wl_registry *registry,
 static void seat_capabilities(void *data, struct wl_seat *wl_seat,
                               uint32_t capabilities) {
   (void)data;
-  if (capabilities & WL_SEAT_CAPABILITY_KEYBOARD) {
-    struct wl_keyboard *kbd = wl_seat_get_keyboard(wl_seat);
-    wl_keyboard_add_listener(kbd, &keyboard_listener, NULL);
+  if ((capabilities & WL_SEAT_CAPABILITY_KEYBOARD) && !keyboard) {
+    keyboard = wl_seat_get_keyboard(wl_seat);
+    wl_keyboard_add_listener(keyboard, &keyboard_listener, NULL);
+  }
+
+  if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && !pointer) {
+    pointer = wl_seat_get_pointer(wl_seat);
+    wl_pointer_add_listener(pointer, &pointer_listener, NULL);
   }
 }
 
@@ -248,10 +299,112 @@ static void keyboard_repeat_info(void *data, struct wl_keyboard *wl_keyboard,
   log_debug("keyboard repeat info event: rate=%d delay=%d", rate, delay);
 }
 
+static void pointer_enter(void *data, struct wl_pointer *wl_pointer,
+                          uint32_t serial, struct wl_surface *s,
+                          wl_fixed_t surface_x, wl_fixed_t surface_y) {
+  (void)data;
+  (void)wl_pointer;
+  (void)serial;
+  (void)s;
+  pointer_x = wl_fixed_to_double(surface_x);
+  pointer_y = wl_fixed_to_double(surface_y);
+}
+
+static void pointer_leave(void *data, struct wl_pointer *wl_pointer,
+                          uint32_t serial, struct wl_surface *s) {
+  (void)data;
+  (void)wl_pointer;
+  (void)serial;
+  (void)s;
+}
+
+static void pointer_motion(void *data, struct wl_pointer *wl_pointer,
+                           uint32_t time, wl_fixed_t surface_x,
+                           wl_fixed_t surface_y) {
+  (void)data;
+  (void)wl_pointer;
+  (void)time;
+  pointer_x = wl_fixed_to_double(surface_x);
+  pointer_y = wl_fixed_to_double(surface_y);
+
+  if (shell.callbacks.pointer(SHL_PTR_EVENT_MOVE, SHL_PTR_BTN_UNKNOWN,
+                              pointer_x, pointer_y)) {
+    shl_draw();
+  }
+}
+
+static void pointer_button(void *data, struct wl_pointer *wl_pointer,
+                           uint32_t serial, uint32_t time, uint32_t button,
+                           uint32_t state) {
+  (void)data;
+  (void)wl_pointer;
+  (void)serial;
+  (void)time;
+
+  assert((state == 1 || state == 0) && "unrecognized button state");
+  if (state != 1) {
+    // act on press, as we do for keys
+    return;
+  }
+
+  shl_ptr_btn_t evt_btn;
+  switch (button) {
+  case 0x110: // left mouse button
+    evt_btn = SHL_PTR_BTN_LEFT;
+    break;
+  default:
+    evt_btn = SHL_PTR_BTN_UNKNOWN;
+    log_debug("unknown pointer button %u", button);
+  }
+
+  if (shell.callbacks.pointer(SHL_PTR_EVENT_CLICK, evt_btn, pointer_x,
+                              pointer_y)) {
+    shl_draw();
+  }
+}
+
+static void pointer_axis(void *data, struct wl_pointer *wl_pointer,
+                         uint32_t time, uint32_t axis, wl_fixed_t value) {
+  (void)data;
+  (void)wl_pointer;
+  (void)time;
+  (void)axis;
+  (void)value;
+}
+
+static void pointer_frame(void *data, struct wl_pointer *wl_pointer) {
+  (void)data;
+  (void)wl_pointer;
+}
+
+static void pointer_axis_source(void *data, struct wl_pointer *wl_pointer,
+                                uint32_t axis_source) {
+  (void)data;
+  (void)wl_pointer;
+  (void)axis_source;
+}
+
+static void pointer_axis_stop(void *data, struct wl_pointer *wl_pointer,
+                              uint32_t time, uint32_t axis) {
+  (void)data;
+  (void)wl_pointer;
+  (void)time;
+  (void)axis;
+}
+
+static void pointer_axis_discrete(void *data, struct wl_pointer *wl_pointer,
+                                  uint32_t axis, int32_t discrete) {
+  (void)data;
+  (void)wl_pointer;
+  (void)axis;
+  (void)discrete;
+}
+
 result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
   assert(shl && "destination shell must be provided");
   assert(cbs.draw && "draw callback must be non-null");
   assert(cbs.key && "key callback must be non-null");
+  assert(cbs.pointer && "pointer callback must be non-null");
 
   display = wl_display_connect(NULL);
   if (!display) {
@@ -263,7 +416,7 @@ result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
   wl_registry_add_listener(registry, &registry_listener, NULL);
   wl_display_roundtrip(display); // wait until the global handler has returned
 
-  if (!compositor || !shm || !layer_shell) {
+  if (!compositor || !shm || !layer_shell || !seat) {
     log_error("missing required global", NULL);
     return ERR_SHL_WAYLAND;
   }
@@ -272,6 +425,7 @@ result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl) {
   shell.callbacks = cbs;
 
   wl_seat_add_listener(seat, &seat_listener, NULL);
+  wl_display_roundtrip(display); // wait for input to be bound
 
   surface = wl_compositor_create_surface(compositor);
   layer_surface = zwlr_layer_shell_v1_get_layer_surface(
@@ -333,7 +487,8 @@ result_t shl_run(void) {
       return ERR_SHL_POLL;
     }
 
-    if (res > 0 && (pfd.revents & POLLIN) && wl_display_dispatch(display) == -1) {
+    if (res > 0 && (pfd.revents & POLLIN) &&
+        wl_display_dispatch(display) == -1) {
       log_error("wl_display_dispatch failed: %s", strerror(errno));
       return ERR_SHL_WAYLAND;
     }
