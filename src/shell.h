@@ -29,11 +29,14 @@ typedef enum {
   SHL_PTR_EVENT_CLICK,
 } shl_ptr_event_t;
 
+typedef enum {
+  SHL_CURSOR_DEFAULT,
+  SHL_CURSOR_POINTER,
+} shl_cursor_t;
+
 typedef struct {
   void (*draw)(uint32_t w, uint32_t h, ctx_t **c);
   bool (*key)(shl_kbd_event_t evt, shl_key_t key);
-  // x and y are surface-local; wl_pointer.button carries no coordinates of its
-  // own, so a click reports the last position seen on enter or motion
   bool (*pointer)(shl_ptr_event_t evt, shl_ptr_btn_t btn, double x, double y);
 } shl_callbacks_t;
 
@@ -45,4 +48,7 @@ typedef struct {
 result_t shl_create(shl_callbacks_t cbs, shl_shell_t **shl);
 
 void shl_draw(void);
+
+void shl_set_cursor(shl_cursor_t cursor, bool force);
+
 result_t shl_run(void);

@@ -45,6 +45,8 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     return;
   }
 
+  memset(btn_hit_targets, 0, sizeof(btn_hit_targets));
+
   ui_init(*ctx, 0x282c34e6);
   double vspace = 24;
 
@@ -121,7 +123,6 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
             },
     };
 
-    memset(btn_hit_targets, 0, sizeof(btn_hit_targets));
     for (int i = 0; i < APP_OPTIONS; i++) {
       double x = btnx + btnboxw * (i % BUTTONS_PER_ROW);
       double y = btny + btnboxh * (i >= BUTTONS_PER_ROW);
@@ -243,13 +244,7 @@ static bool handle_key(shl_kbd_event_t evt, shl_key_t key) {
   return false;
 }
 
-static bool handle_pointer(shl_ptr_event_t evt, shl_ptr_btn_t btn, double x,
-                           double y) {
-  if (evt != SHL_PTR_EVENT_CLICK || btn != SHL_PTR_BTN_LEFT)
-    return false;
-
-  log_debug("received click at %.0fx%.0f", x, y);
-
+static int option_at(double x, double y) {
   for (int i = 0; i < APP_OPTIONS; i++) {
     rect_t rect = btn_hit_targets[i];
     if (rect.w <= 0 || rect.h <= 0)
@@ -260,12 +255,44 @@ static bool handle_pointer(shl_ptr_event_t evt, shl_ptr_btn_t btn, double x,
     if (y < rect.y || y >= rect.y + rect.h)
       continue;
 
-    state.option = (app_option_t)i;
-    state.status = APP_STATUS_PRISTINE;
-    return confirm();
+    return i;
   }
 
-  return false; // cliecked nowhere
+  return -1;
+}
+
+static bool handle_pointer(shl_ptr_event_t evt, shl_ptr_btn_t btn, double x,
+                           double y) {
+  if (state.status == APP_STATUS_INHIBIT) {
+    shl_set_cursor(SHL_CURSOR_DEFAULT, false);
+    return false;
+  }
+
+  int option = option_at(x, y);
+
+  if (evt == SHL_PTR_EVENT_MOVE) {
+    shl_set_cursor(option < 0 ? SHL_CURSOR_DEFAULT : SHL_CURSOR_POINTER, false);
+
+    if (option < 0 || (app_option_t)option == state.option)
+      return false;
+
+    state.option = (app_option_t)option;
+    state.status = APP_STATUS_PRISTINE;
+    return true;
+  }
+
+  if (btn != SHL_PTR_BTN_LEFT)
+    return false;
+
+  log_debug("received click at %.0fx%.0f", x, y);
+
+  // Close when clicking on a blank spot
+  if (option < 0)
+    exit(0);
+
+  state.option = (app_option_t)option;
+  state.status = APP_STATUS_PRISTINE;
+  return confirm();
 }
 
 static shl_callbacks_t callbacks = {

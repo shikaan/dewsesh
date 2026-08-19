@@ -4,6 +4,7 @@
 #include "result.h"
 #include "timer.h"
 #include <assert.h>
+#include <cursor-shape-v1.h>
 #include <errno.h>
 #include <limits.h>
 #include <poll.h>
@@ -17,6 +18,9 @@
 #include <wayland-client-protocol.h>
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
+
+// stub for a symbol in the cursor-shape protocol we do not use
+const struct wl_interface zwp_tablet_tool_v2_interface;
 
 static shl_shell_t shell = {0};
 
@@ -85,16 +89,19 @@ static struct wl_compositor *compositor = NULL;
 static struct wl_shm *shm = NULL;
 static struct zwlr_layer_shell_v1 *layer_shell = NULL;
 static struct wl_seat *seat = NULL;
+static struct wp_cursor_shape_manager_v1 *cursor_shape = NULL;
 
 static struct wl_keyboard *keyboard = NULL;
 static struct wl_pointer *pointer = NULL;
+static struct wp_cursor_shape_device_v1 *cursor_shape_device = NULL;
 
 static double pointer_x = 0;
 static double pointer_y = 0;
+static uint32_t pointer_serial = 0;
+static shl_cursor_t cursor = SHL_CURSOR_DEFAULT;
 
 static struct wl_surface *surface;
 static struct zwlr_layer_surface_v1 *layer_surface;
-
 static uint32_t surface_width = 0;
 static uint32_t surface_height = 0;
 
@@ -182,6 +189,9 @@ static void registry_global(void *data, struct wl_registry *registry,
         wl_registry_bind(registry, name, &zwlr_layer_shell_v1_interface, 1);
   } else if (strcmp(interface, wl_seat_interface.name) == 0) {
     seat = wl_registry_bind(registry, name, &wl_seat_interface, 4);
+  } else if (strcmp(interface, wp_cursor_shape_manager_v1_interface.name) == 0) {
+    cursor_shape = wl_registry_bind(registry, name,
+                                    &wp_cursor_shape_manager_v1_interface, 1);
   }
 }
 
@@ -203,6 +213,11 @@ static void seat_capabilities(void *data, struct wl_seat *wl_seat,
   if ((capabilities & WL_SEAT_CAPABILITY_POINTER) && !pointer) {
     pointer = wl_seat_get_pointer(wl_seat);
     wl_pointer_add_listener(pointer, &pointer_listener, NULL);
+
+    if (cursor_shape) {
+      cursor_shape_device =
+          wp_cursor_shape_manager_v1_get_pointer(cursor_shape, pointer);
+    }
   }
 }
 
@@ -304,10 +319,12 @@ static void pointer_enter(void *data, struct wl_pointer *wl_pointer,
                           wl_fixed_t surface_x, wl_fixed_t surface_y) {
   (void)data;
   (void)wl_pointer;
-  (void)serial;
   (void)s;
   pointer_x = wl_fixed_to_double(surface_x);
   pointer_y = wl_fixed_to_double(surface_y);
+
+  pointer_serial = serial;
+  shl_set_cursor(SHL_CURSOR_DEFAULT, true);
 }
 
 static void pointer_leave(void *data, struct wl_pointer *wl_pointer,
@@ -463,6 +480,22 @@ void shl_draw(void) {
   wl_surface_attach(surface, c->wl.buffer, 0, 0);
   wl_surface_damage_buffer(surface, 0, 0, (int)c->width, (int)c->height);
   wl_surface_commit(surface);
+}
+
+void shl_set_cursor(shl_cursor_t c, bool force) {
+  if (!cursor_shape_device || pointer_serial == 0)
+    return;
+
+  if (!force && c == cursor)
+    return;
+
+  uint32_t shape = c == SHL_CURSOR_POINTER
+                       ? WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_POINTER
+                       : WP_CURSOR_SHAPE_DEVICE_V1_SHAPE_DEFAULT;
+  wp_cursor_shape_device_v1_set_shape(cursor_shape_device, pointer_serial,
+                                      shape);
+
+  cursor = c;
 }
 
 result_t shl_run(void) {

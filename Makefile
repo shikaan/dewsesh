@@ -66,18 +66,32 @@ protocols/wlr-layer-shell-unstable-v1.o: CFLAGS := -O2
 protocols/wlr-layer-shell-unstable-v1.o: protocols/wlr-layer-shell-unstable-v1.h \
 	protocols/wlr-layer-shell-unstable-v1.c
 
+protocols/cursor-shape-v1.h: protocols/wlr-layer-shell-unstable-v1.o
+	wayland-scanner client-header \
+		./protocols/cursor-shape-v1.xml $@
+
+protocols/cursor-shape-v1.c: protocols/cursor-shape-v1.h
+	wayland-scanner private-code \
+		./protocols/cursor-shape-v1.xml $@
+
+protocols/cursor-shape-v1.o: CFLAGS := -O2
+protocols/cursor-shape-v1.o: protocols/cursor-shape-v1.h \
+	protocols/cursor-shape-v1.c
+
 src/cli:
 src/ui.o: src/ctx.o
 src/ctx.o: src/log.o
 src/timer.o: src/log.o
-src/shell.o: src/log.o src/timer.o src/ctx.o
+src/shell.o: src/log.o src/timer.o src/ctx.o \
+	protocols/wlr-layer-shell-unstable-v1.h protocols/cursor-shape-v1.h
 src/spawn.o: src/log.o
 
 main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo) \
 	-isystem protocols -DVERSION='"$(VERSION)"' -DSHA='"$(SHA)"'
 main: LDLIBS += $(shell pkg-config --libs wayland-client cairo)
 main: protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o \
-	src/log.o src/ctx.o src/shell.o src/ui.o src/spawn.o src/timer.o src/cli.o	
+	protocols/cursor-shape-v1.o \
+	src/log.o src/ctx.o src/shell.o src/ui.o src/spawn.o src/timer.o src/cli.o
 
 clean:
 	rm -f main *.o src/*.o protocols/*.c protocols/*.h
