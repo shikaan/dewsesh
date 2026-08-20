@@ -2,6 +2,8 @@
 
 #include <stdbool.h>
 
+#define NAME "dewsesh"
+
 typedef struct {
   bool debug;
   const char *config;

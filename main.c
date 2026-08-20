@@ -1,5 +1,6 @@
 #include "src/app.h"
 #include "src/cli.h"
+#include "src/config.h"
 #include "src/ctx.h"
 #include "src/log.h"
 #include "src/result.h"
@@ -35,6 +36,8 @@ typedef struct {
 } rect_t;
 static rect_t btn_hit_targets[APP_OPTIONS];
 
+static config_t *config = NULL;
+
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   static char msg[128];
   static char name[32];
@@ -47,10 +50,10 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
   memset(btn_hit_targets, 0, sizeof(btn_hit_targets));
 
-  ui_init(*ctx, 0x282c34e6);
-  double vspace = 24;
+  ui_init(*ctx, config->color.overlay);
+  const double vspace = config->font.size * 1.5;
 
-  double btnh = 88;
+  const double btnh = config->font.size * 5.5;
   double btnw = 144;
   double btnpady = 48;
   double btnpadx = 64;
@@ -74,9 +77,9 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   double btny = framey + headery + headerh;
 
   ui_txt_t txt_opts = {
-      .color = 0xeaeaeaff,
-      .size = 16,
-      .family = "monospace",
+      .color = config->color.text,
+      .size = config->font.size,
+      .family = config->font.status,
       .weight = UI_TXT_WEIGHT_BOLD,
       .align = UI_TXT_ALIGN_CENTER,
   };
@@ -86,15 +89,15 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   ui_txt(txt_opts, framex + framew / 2, framey + vspace, msg);
 
   if (state.status == APP_STATUS_INHIBIT) {
-    txt_opts.size = 48;
-    txt_opts.family = "sans-seif";
+    txt_opts.size = config->font.size * 3;
+    txt_opts.family = config->font.text;
     txt_opts.weight = UI_TXT_WEIGHT_BOLD;
     txt_opts.align = UI_TXT_ALIGN_CENTER;
 
     sprintf(msg, "%s...", APP_OPTION_MSG[state.option]);
 
     ui_txt_t sub_opts = txt_opts;
-    sub_opts.size = 16;
+    sub_opts.size = config->font.size;
     sub_opts.weight = UI_TXT_WEIGHT_NORMAL;
     const char *submsg = APP_OPTION_COUNTDOWN[state.option];
 
@@ -102,7 +105,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     ui_txt_init(txt_opts, msg, &msg_bounds);
     ui_txt_init(sub_opts, submsg, &sub_bounds);
 
-    double gap = 24;
+    double gap = config->font.size * 1.5;
     double gridh = nbtnrows * btnboxh - btnpady;
     double content_height = msg_bounds.height + gap + sub_bounds.height;
     double top = btny + (gridh - content_height) / 2;
@@ -114,12 +117,20 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     ui_txt_commit(txt_opts, framex + framew / 2, msgy, &msg_bounds, msg);
   } else {
     ui_btn_t btn_opts = {
-        .icon_family = "FontAwesome",
-        .text_family = "Noto Sans",
+        .icon_family = config->font.icon,
+        .text_family = config->font.text,
         .color =
             {
-                [UI_BTN_STATUS_NONE] = {.bg = 0x00000000, .fg = 0xeaeaeaff},
-                [UI_BTN_STATUS_SELECTED] = {.bg = 0x82a2be80, .fg = 0xeaeaeaff},
+                [UI_BTN_STATUS_NONE] =
+                    {
+                        .bg = config->color.button,
+                        .fg = config->color.text,
+                    },
+                [UI_BTN_STATUS_SELECTED] =
+                    {
+                        .bg = config->color.selected,
+                        .fg = config->color.text,
+                    },
             },
     };
 
@@ -142,13 +153,13 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     }
   }
 
-  txt_opts.size = 16;
+  txt_opts.size = config->font.size;
   txt_opts.align = UI_TXT_ALIGN_CENTER;
 
   const char *status = NULL;
   if (state.status == APP_STATUS_ERRORED) {
-    txt_opts.family = "sans-serif";
-    txt_opts.color = 0xff6b6bff;
+    txt_opts.family = config->font.text;
+    txt_opts.color = config->color.error;
     txt_opts.weight = UI_TXT_WEIGHT_BOLD;
 
     sprintf(msg, "%s failed. See logs for details.",
@@ -156,11 +167,13 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     status = msg;
   } else if (state.status == APP_STATUS_INHIBIT) {
     status = "ENTER Confirm · ESC Cancel";
-    txt_opts.family = "monospace", txt_opts.color = 0xc4c8c6ff;
+    txt_opts.family = config->font.status;
+    txt_opts.color = config->color.status;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   } else {
     status = "ARROWS Move · ENTER Confirm · ESC Cancel";
-    txt_opts.family = "monospace", txt_opts.color = 0xc4c8c6ff;
+    txt_opts.family = config->font.status;
+    txt_opts.color = config->color.status;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   }
   assert(status && "status must be defined");
@@ -171,6 +184,8 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 static bool action(void *data) {
   log_debug("launching option %d", state.option);
   (void)data;
+
+  // TODO: use commands from configuration instead
   if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
     exit(0);
 
@@ -304,15 +319,21 @@ static shl_callbacks_t callbacks = {
 int main(int argc, char *const *argv) {
   cli_opts_t *cli_opts;
   cli_parse(argc, argv, &cli_opts);
+  assert(cli_opts && "cli_opts must be non-null");
 
   log_init(cli_opts->debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO);
   log_debug("cli options: configuration = '%s'",
             cli_opts->config ? cli_opts->config : "(nil)");
   log_debug("cli options: debug = %s", cli_opts->debug ? "true" : "false");
 
+  const char *config_path = cli_opts->config ? cli_opts->config : cfg_path();
+  cfg_read(config_path, &config);
+  assert(config && "config must be non-null");
+
   shl_shell_t *shl = NULL;
   if (shl_create(callbacks, &shl) != OK)
     return 1;
 
+  assert(shl && "must be non-null");
   return shl_run() == OK ? 0 : 1;
 }

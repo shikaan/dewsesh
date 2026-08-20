@@ -1,20 +1,85 @@
 #include "config.h"
+#include "cli.h"
 #include "color.h"
+#include "log.h"
+#include "result.h"
+#include <assert.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <wordexp.h>
+
+#define CONFIG_VALUE_SEPARATOR '='
+#define CONFIG_NAMESPACE_SEPARATOR '.'
+#define CONFIG_COMMENT '#'
+
+#define CONFIG_NAMESPACE_FONT "font"
+#define CONFIG_FONT_TEXT "text"
+#define CONFIG_FONT_INFO "info"
+#define CONFIG_FONT_ICON "icon"
+#define CONFIG_FONT_SIZE "size"
+
+#define CONFIG_NAMESPACE_ACTIONS "actions"
+#define CONFIG_ACTIONS_LOCK "lock"
+#define CONFIG_ACTIONS_SUSPEND "suspend"
+#define CONFIG_ACTIONS_HIBERNATE "hibernate"
+#define CONFIG_ACTIONS_LOGOUT "logout"
+#define CONFIG_ACTIONS_REBOOT "reboot"
+#define CONFIG_ACTIONS_SHUTDOWN "shutdown"
+
+#define CONFIG_NAMESPACE_COLOR "color"
+#define CONFIG_COLOR_OVERLAY "overlay"
+#define CONFIG_COLOR_TEXT "text"
+#define CONFIG_COLOR_ERROR "error"
+#define CONFIG_COLOR_SELECTED "selected"
+#define CONFIG_COLOR_BUTTON "button"
+#define CONFIG_COLOR_STATUS "status"
+
+#ifndef SYSCONFDIR
+#define SYSCONFDIR "/etc"
+#endif
+
+static config_t config = {0};
 
 static bool file_exists(const char *path) {
   return path && access(path, R_OK) != -1;
 }
 
-char *get_config_path(void) {
+// Most strings in this config can be distinguished by the first char
+static inline bool streql(const char *a, const char *b) {
+  return a[0] == b[0] && strcmp(a, b) == 0;
+}
+
+static void init(void) {
+  config.font.icon = "FontAwesome";
+  config.font.status = "monospace";
+  config.font.text = "sans-serif";
+  config.font.size = 16;
+
+  config.actions.lock = "dewlock";
+  config.actions.suspend = "systemctl suspend-then-hibernate";
+  config.actions.hibernate = "systemctl hibernate";
+  config.actions.logout = "loginctl terminate-session";
+  config.actions.reboot = "systemctl reboot";
+  config.actions.shutdown = "systemctl poweroff";
+
+  config.color.error = 0xff6b6bff;
+  config.color.text = 0xeaeaeaff;
+  config.color.overlay = 0x282c34e6;
+  config.color.selected = 0x82a2be80;
+  config.color.button = 0x00000000;
+  config.color.status = 0xc4c8c6ff;
+}
+
+char *cfg_path(void) {
   static const char *config_paths[] = {
-      "$HOME/.dewlock/config",
-      "$XDG_CONFIG_HOME/dewlock/config",
-      SYSCONFDIR "/dewlock/config",
+      "$XDG_CONFIG_HOME/" NAME "/config",
+      SYSCONFDIR "/" NAME "/config",
   };
 
   char *config_home = getenv("XDG_CONFIG_HOME");
   if (!config_home || config_home[0] == '\0') {
-    config_paths[1] = "$HOME/.config/dewlock/config";
+    config_paths[1] = "$HOME/.config/" NAME "/config";
   }
 
   wordexp_t p;
@@ -33,17 +98,38 @@ char *get_config_path(void) {
   return NULL;
 }
 
-int load_config(char *path, struct dewlock_state *state) {
-  FILE *config = fopen(path, "r");
-  if (!config) {
-    dewlock_log(LOG_ERROR, "Failed to read config. Running without it.");
-    return 0;
+void cfg_read(const char *path, config_t **cfg) {
+#define readstr(Prop, Value)                                                   \
+  if (streql(key, Value)) {                                                    \
+    (Prop) = strdup(value);                                                    \
+    continue;                                                                  \
   }
+#define readcol(Prop, Value)                                                   \
+  if (streql(key, Value)) {                                                    \
+    (Prop) = color_from_string(value);                                         \
+    continue;                                                                  \
+  }
+
+  init();
+  *cfg = &config;
+
+  if (!path) {
+    log_info("no configuration path, using defaults", NULL);
+    return;
+  }
+
+  FILE *config_file = fopen(path, "r");
+  if (!config_file) {
+    log_warn("failed to load config at '%s', using defaults", path);
+    return;
+  }
+
   char *line = NULL;
   size_t line_size = 0;
   ssize_t nread;
   int line_number = 0;
-  while ((nread = getline(&line, &line_size, config)) != -1) {
+  log_debug("config", NULL);
+  while ((nread = getline(&line, &line_size, config_file)) != -1) {
     line_number++;
 
     if (line[nread - 1] == '\n') {
@@ -54,10 +140,10 @@ int load_config(char *path, struct dewlock_state *state) {
       continue;
     }
 
-    dewlock_log(LOG_DEBUG, "Config Line #%d: %s", line_number, line);
+    log_debug("  %d | %s", line_number, line);
     char *separator = strchr(line, CONFIG_VALUE_SEPARATOR);
     if (!separator) {
-      dewlock_log(LOG_ERROR, "Invalid config line. Skipping.");
+      log_warn("invalid line (missing %s), skipping", CONFIG_VALUE_SEPARATOR);
       continue;
     }
 
@@ -66,73 +152,47 @@ int load_config(char *path, struct dewlock_state *state) {
 
     char *dot = strchr(line, CONFIG_NAMESPACE_SEPARATOR);
     if (!dot) {
-      dewlock_log(LOG_ERROR, "Invalid config line. Skipping.");
+      log_warn("invalid line (missing %s), skipping",
+               CONFIG_NAMESPACE_SEPARATOR);
       continue;
     }
     *dot = '\0';
     char *key = dot + 1;
     char *namespace = line;
 
-    if (namespace[0] == CONFIG_NAMESPACE_BACKGROUND[0] &&
-        !strcmp(namespace, CONFIG_NAMESPACE_BACKGROUND)) {
-      if (!strcmp(key, CONFIG_BACKGROUND_PATH)) {
-        state->args.background.path = strdup(value);
-        continue;
-      }
+    if (streql(namespace, CONFIG_NAMESPACE_FONT)) {
+      readstr(config.font.text, CONFIG_FONT_TEXT);
+      readstr(config.font.status, CONFIG_FONT_INFO);
+      readstr(config.font.icon, CONFIG_FONT_ICON);
 
-      if (!strcmp(key, CONFIG_BACKGROUND_MODE)) {
-        state->args.background.mode = parse_background_mode(value);
+      if (streql(key, CONFIG_FONT_SIZE)) {
+        // FIXME: this feels unsafe
+        config.font.size = (uint32_t)atol(value);
         continue;
       }
     }
 
-    if (namespace[0] == CONFIG_NAMESPACE_FONT[0] &&
-        !strcmp(namespace, CONFIG_NAMESPACE_FONT)) {
-      if (!strcmp(key, CONFIG_FONT_FAMILY)) {
-        state->args.font.family = strdup(value);
-        continue;
-      }
-
-      if (!strcmp(key, CONFIG_FONT_SIZE)) {
-        state->args.font.size = atoi(value);
-        continue;
-      }
+    if (streql(namespace, CONFIG_NAMESPACE_ACTIONS)) {
+      readstr(config.actions.lock, CONFIG_ACTIONS_LOCK);
+      readstr(config.actions.suspend, CONFIG_ACTIONS_SUSPEND);
+      readstr(config.actions.hibernate, CONFIG_ACTIONS_HIBERNATE);
+      readstr(config.actions.logout, CONFIG_ACTIONS_LOGOUT);
+      readstr(config.actions.reboot, CONFIG_ACTIONS_REBOOT);
+      readstr(config.actions.shutdown, CONFIG_ACTIONS_SHUTDOWN);
     }
 
-    if (namespace[0] == CONFIG_NAMESPACE_COLOR[0] &&
-        !strcmp(namespace, CONFIG_NAMESPACE_COLOR)) {
-      if (!strcmp(key, CONFIG_COLOR_BACKGROUND)) {
-        state->args.colors.background = color_from_string(value);
-        continue;
-      }
-
-      if (!strcmp(key, CONFIG_COLOR_OVERLAY)) {
-        state->args.colors.overlay = parse_color(value);
-        continue;
-      }
-
-      if (!strcmp(key, CONFIG_COLOR_TEXT)) {
-        state->args.colors.text = parse_color(value);
-        continue;
-      }
-
-      if (!strcmp(key, CONFIG_COLOR_WARNING)) {
-        state->args.colors.warning = parse_color(value);
-        continue;
-      }
-
-      if (!strcmp(key, CONFIG_COLOR_ERROR)) {
-        state->args.colors.error = parse_color(value);
-        continue;
-      }
+    if (streql(namespace, CONFIG_NAMESPACE_COLOR)) {
+      readcol(config.color.overlay, CONFIG_COLOR_OVERLAY);
+      readcol(config.color.text, CONFIG_COLOR_TEXT);
+      readcol(config.color.error, CONFIG_COLOR_ERROR);
+      readcol(config.color.selected, CONFIG_COLOR_SELECTED);
+      readcol(config.color.button, CONFIG_COLOR_BUTTON);
+      readcol(config.color.status, CONFIG_COLOR_STATUS);
     }
   }
+
   free(line);
-  fclose(config);
-  return 0;
-}
-
-result_t config_read(config_t config**) {
-
-  return OK;
+  fclose(config_file);
+#undef readcol
+#undef readstr
 }

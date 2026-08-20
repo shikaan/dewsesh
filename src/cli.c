@@ -7,7 +7,6 @@
 
 #define len(Array) sizeof(Array) / sizeof(Array[0])
 
-static const char *NAME = "dewsesh";
 static const char *OPTSTR = ":c:dhv";
 static struct option OPTIONS[] = {
     {"configure", required_argument, 0, 'c'},

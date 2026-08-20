@@ -8,7 +8,7 @@
 
 typedef uint32_t color_t;
 
-static color_t color_from_string(const char *str) {
+static inline color_t color_from_string(const char *str) {
   const color_t transparent = 0xffffffff;
 
   if (str[0] != '#') {
@@ -29,4 +29,3 @@ static color_t color_from_string(const char *str) {
 
   return (color_t)res;
 }
-
