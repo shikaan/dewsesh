@@ -95,19 +95,19 @@ void ui_rect(double x, double y, double w, double h, color_t c) {
 
 void ui_btn(ui_btn_t opts, double x, double y, double w, double h,
             const char *text, const char *icon, ui_btn_status_t status) {
-  double gap = 16;
+  double gap = opts.size;
   ui_rect(x, y, w, h, opts.color[status].bg);
 
   ui_txt_t icon_opts = {
       .color = opts.color[status].fg,
-      .size = 28,
+      .size = opts.size * 1.75,
       .family = opts.icon_family,
       .weight = UI_TXT_WEIGHT_NORMAL,
       .align = UI_TXT_ALIGN_CENTER,
   };
   ui_txt_t label_opts = icon_opts;
   label_opts.family = opts.text_family;
-  label_opts.size = 16;
+  label_opts.size = opts.size;
 
   ui_txt_bounds_t icon_bounds, label_bounds;
   ui_txt_init(icon_opts, icon, &icon_bounds);

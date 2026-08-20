@@ -54,9 +54,9 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   const double vspace = config->font.size * 1.5;
 
   const double btnh = config->font.size * 5.5;
-  double btnw = 144;
-  double btnpady = 48;
-  double btnpadx = 64;
+  double btnw = config->font.size * 9;
+  double btnpady = config->font.size * 3;
+  double btnpadx = config->font.size * 4;
   double btnboxh = btnh + btnpady;
   double btnboxw = btnw + btnpadx;
   double nbtnrows = (double)BUTTON_ROWS;
@@ -66,10 +66,10 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
   double btnx = framex;
 
-  double headerh = 48;
+  double headerh = config->font.size * 3;
   double headery = vspace;
 
-  double footerh = 48;
+  double footerh = config->font.size * 3;
   double footery_relative = btnboxh * nbtnrows + vspace + headerh;
 
   double frameh = footery_relative - btnpady + footerh + vspace;
@@ -119,6 +119,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     ui_btn_t btn_opts = {
         .icon_family = config->font.icon,
         .text_family = config->font.text,
+        .size = config->font.size,
         .color =
             {
                 [UI_BTN_STATUS_NONE] =
@@ -178,7 +179,8 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   }
   assert(status && "status must be defined");
 
-  ui_txt(txt_opts, framex + framew / 2, framey + footery_relative + 16, status);
+  ui_txt(txt_opts, framex + framew / 2,
+         framey + footery_relative + config->font.size, status);
 }
 
 static bool action(void *data) {

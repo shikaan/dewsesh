@@ -56,6 +56,7 @@ typedef struct {
 typedef struct {
   const char *text_family;
   const char *icon_family;
+  uint32_t size;
   ui_btn_colors_t color[UI_BTN_STATUSES];
 } ui_btn_t;
 
