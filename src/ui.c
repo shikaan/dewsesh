@@ -5,7 +5,7 @@
 
 static cairo_t *cairo;
 
-void ui_init(ctx_t *c, ui_color_t background) {
+void ui_init(ctx_t *c, color_t background) {
   cairo = c->cairo.ctx;
   cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
   cairo_identity_matrix(cairo);
@@ -17,7 +17,7 @@ void ui_init(ctx_t *c, ui_color_t background) {
   cairo_restore(cairo);
 }
 
-void ui_set_source_color(ui_color_t color) {
+void ui_set_source_color(color_t color) {
   assert(cairo && "cairo must be non-null");
 
   cairo_set_source_rgba(cairo, (color >> (3 * 8) & 0xFF) / 255.0,
@@ -87,7 +87,7 @@ void ui_txt(ui_txt_t opts, double x, double y, const char *text) {
   ui_txt_commit(opts, x, y, &r, text);
 }
 
-void ui_rect(double x, double y, double w, double h, ui_color_t c) {
+void ui_rect(double x, double y, double w, double h, color_t c) {
   ui_set_source_color(c);
   cairo_rectangle(cairo, x, y, w, h);
   cairo_fill(cairo);
