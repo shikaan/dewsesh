@@ -2,7 +2,6 @@
 #include "cli.h"
 #include "color.h"
 #include "log.h"
-#include "result.h"
 #include <assert.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -56,12 +55,12 @@ static void init(void) {
   config.font.text = "sans-serif";
   config.font.size = 16;
 
-  config.actions.lock = "dewlock";
-  config.actions.suspend = "systemctl suspend-then-hibernate";
-  config.actions.hibernate = "systemctl hibernate";
-  config.actions.logout = "loginctl terminate-session";
-  config.actions.reboot = "systemctl reboot";
-  config.actions.shutdown = "systemctl poweroff";
+  config.actions[APP_OPTION_LOCK] = "loginctl lock-session";
+  config.actions[APP_OPTION_SUSPEND] = "systemctl suspend-then-hibernate";
+  config.actions[APP_OPTION_HIBERNATE] = "systemctl hibernate";
+  config.actions[APP_OPTION_LOGOUT] = "loginctl terminate-session";
+  config.actions[APP_OPTION_RESTART] = "systemctl reboot";
+  config.actions[APP_OPTION_SHUTDOWN] = "systemctl poweroff";
 
   config.color.error = 0xff6b6bff;
   config.color.text = 0xeaeaeaff;
@@ -173,12 +172,12 @@ void cfg_read(const char *path, config_t **cfg) {
     }
 
     if (streql(namespace, CONFIG_NAMESPACE_ACTIONS)) {
-      readstr(config.actions.lock, CONFIG_ACTIONS_LOCK);
-      readstr(config.actions.suspend, CONFIG_ACTIONS_SUSPEND);
-      readstr(config.actions.hibernate, CONFIG_ACTIONS_HIBERNATE);
-      readstr(config.actions.logout, CONFIG_ACTIONS_LOGOUT);
-      readstr(config.actions.reboot, CONFIG_ACTIONS_REBOOT);
-      readstr(config.actions.shutdown, CONFIG_ACTIONS_SHUTDOWN);
+      readstr(config.actions[APP_OPTION_LOCK], CONFIG_ACTIONS_LOCK);
+      readstr(config.actions[APP_OPTION_SUSPEND], CONFIG_ACTIONS_SUSPEND);
+      readstr(config.actions[APP_OPTION_HIBERNATE], CONFIG_ACTIONS_HIBERNATE);
+      readstr(config.actions[APP_OPTION_LOGOUT], CONFIG_ACTIONS_LOGOUT);
+      readstr(config.actions[APP_OPTION_RESTART], CONFIG_ACTIONS_REBOOT);
+      readstr(config.actions[APP_OPTION_SHUTDOWN], CONFIG_ACTIONS_SHUTDOWN);
     }
 
     if (streql(namespace, CONFIG_NAMESPACE_COLOR)) {

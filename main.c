@@ -188,7 +188,7 @@ static bool action(void *data) {
   (void)data;
 
   // TODO: use commands from configuration instead
-  if (spw_launch(APP_OPTION_CMD[state.option]) == OK)
+  if (spw_launch(config->actions[state.option]) == OK)
     exit(0);
 
   state.status = APP_STATUS_ERRORED;

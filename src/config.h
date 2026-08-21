@@ -1,5 +1,6 @@
 #pragma once
 
+#include "app.h"
 #include "color.h"
 #include <stdint.h>
 
@@ -9,15 +10,8 @@ typedef struct {
     const char *status;
     const char *icon;
     uint32_t size;
-  } font;
-  struct {
-    const char *lock;
-    const char *suspend;
-    const char *hibernate;
-    const char *logout;
-    const char *reboot;
-    const char *shutdown;
-  } actions;
+  } font; 
+  const char* actions[APP_OPTIONS];
   struct {
     color_t overlay;
     color_t text;
