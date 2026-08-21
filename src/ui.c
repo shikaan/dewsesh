@@ -26,8 +26,8 @@ void ui_set_source_color(color_t color) {
                         (color >> (0 * 8) & 0xFF) / 255.0);
 }
 
-void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
-  assert(extents && "rect must be non-null");
+void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *bounds) {
+  assert(bounds && "rect must be non-null");
   assert(cairo && "cairo must be non-null");
 
   cairo_font_options_t *font_options = cairo_font_options_create();
@@ -46,9 +46,9 @@ void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *extents) {
   cairo_text_extents_t ext;
   cairo_text_extents(cairo, text, &ext);
 
-  extents->height = ext.height;
-  extents->width = ext.width;
-  extents->y_bearing = ext.y_bearing;
+  bounds->height = ext.height;
+  bounds->width = ext.width;
+  bounds->y_bearing = ext.y_bearing;
 
   cairo_font_options_destroy(font_options);
 }

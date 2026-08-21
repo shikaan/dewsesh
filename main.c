@@ -21,6 +21,12 @@
 #include <wayland-client.h>
 #include <wlr-layer-shell-unstable-v1.h>
 
+#ifdef __SANITIZE_ADDRESS__
+// fontconfig caches its config/font data for the life of the process and
+// never frees it unless the app calls FcFini() which cairo doesn't do
+const char *__lsan_default_suppressions(void) { return "leak:libfontconfig.so\n"; }
+#endif
+
 static app_state_t state = {
     .option = APP_OPTION_LOCK,
     .status = APP_STATUS_PRISTINE,
@@ -187,7 +193,6 @@ static bool action(void *data) {
   log_debug("launching option %d", state.option);
   (void)data;
 
-  // TODO: use commands from configuration instead
   if (spw_launch(config->actions[state.option]) == OK)
     exit(0);
 
