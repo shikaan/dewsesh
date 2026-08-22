@@ -5,7 +5,7 @@ A minimal, beautiful session manager for Wayland.
 </p>
 
 <p align="center">
-  <img width="640" alt="dimmed screen with dewsesh" src="https://raw.githubusercontent.com/shikaan/dewsesh/refs/heads/main/screenshot.png" />
+  <img width="1024" alt="dimmed screen with dewsesh" src="https://github.com/shikaan/dewsesh/blob/main/screenshot.png?raw=true" />
 </p>
 
 dewsesh is a customizable session manager for Wayland compositors, inspired by 
