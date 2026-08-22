@@ -28,10 +28,11 @@ https://github.com/shikaan/dewsesh/issues
 
 # OPTIONS
 
-*-c, --config* <path>
+*-c, --configure* <path>
 	The config file to use. By default, the following paths are checked:
-	_$HOME/.dewsesh/config_, _$XDG\_CONFIG\_HOME/dewlock/config_, and
-	_SYSCONFDIR/dewsesh/config_. See *CONFIGURATION* for details.
+	_$XDG\_CONFIG\_HOME/dewsesh/config_ (or _$HOME/.config/dewsesh/config_
+	if _$XDG\_CONFIG\_HOME_ is unset), and _SYSCONFDIR/dewsesh/config_. See
+	*CONFIGURATION* for details.
 
 *-d, --debug*
 	Enable debugging output.
