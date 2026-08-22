@@ -105,7 +105,7 @@ void cfg_read(const char *path, config_t **cfg) {
   }
 #define readcol(Prop, Value)                                                   \
   if (streql(key, Value)) {                                                    \
-    (Prop) = color_from_string(value);                                         \
+    (Prop) = color_from_string(value, Prop);                                   \
     continue;                                                                  \
   }
 
