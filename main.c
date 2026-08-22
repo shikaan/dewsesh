@@ -24,7 +24,9 @@
 #ifdef __SANITIZE_ADDRESS__
 // fontconfig caches its config/font data for the life of the process and
 // never frees it unless the app calls FcFini() which cairo doesn't do
-const char *__lsan_default_suppressions(void) { return "leak:libfontconfig.so\n"; }
+const char *__lsan_default_suppressions(void) {
+  return "leak:libfontconfig.so\n";
+}
 #endif
 
 static app_state_t state = {
@@ -58,6 +60,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
   ui_init(*ctx, config->color.overlay);
   const double vspace = config->font.size * 1.5;
+  const double hspace = config->font.size * 2.5;
 
   const double btnh = config->font.size * 5.5;
   double btnw = config->font.size * 9;
@@ -81,6 +84,9 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   double frameh = footery_relative - btnpady + footerh + vspace;
   double framey = (double)h / 2 - frameh / 2;
   double btny = framey + headery + headerh;
+
+  ui_rect(framex - hspace, framey - vspace, framew + 2 * hspace,
+          frameh + 2 * vspace, config->color.window);
 
   ui_txt_t txt_opts = {
       .color = config->color.text,

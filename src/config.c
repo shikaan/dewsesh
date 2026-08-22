@@ -33,6 +33,7 @@
 #define CONFIG_COLOR_SELECTED "selected"
 #define CONFIG_COLOR_BUTTON "button"
 #define CONFIG_COLOR_STATUS "status"
+#define CONFIG_COLOR_WINDOW "window"
 
 #ifndef SYSCONFDIR
 #define SYSCONFDIR "/etc"
@@ -64,10 +65,11 @@ static void init(void) {
 
   config.color.error = 0xff6b6bff;
   config.color.text = 0xeaeaeaff;
-  config.color.overlay = 0x282c34e6;
+  config.color.overlay = 0x000000cc;
   config.color.selected = 0x82a2be80;
   config.color.button = 0x00000000;
   config.color.status = 0xc4c8c6ff;
+  config.color.window = 0x00000000;
 }
 
 char *cfg_path(void) {
@@ -187,6 +189,7 @@ void cfg_read(const char *path, config_t **cfg) {
       readcol(config.color.selected, CONFIG_COLOR_SELECTED);
       readcol(config.color.button, CONFIG_COLOR_BUTTON);
       readcol(config.color.status, CONFIG_COLOR_STATUS);
+      readcol(config.color.window, CONFIG_COLOR_WINDOW);
     }
   }
 

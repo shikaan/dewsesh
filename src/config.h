@@ -15,10 +15,11 @@ typedef struct {
   struct {
     color_t overlay;
     color_t text;
+    color_t status;
     color_t error;
     color_t selected;
     color_t button;
-    color_t status;
+    color_t window;
   } color;
 } config_t;
 
