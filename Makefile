@@ -58,7 +58,7 @@ install:
 
 docs:
 	@echo "Generating manpage dewsesh.1.roff..." 
-	@which scdoc > /dev/null || echo "ERROR: missing required scdoc binary"
+	@which scdoc > /dev/null || (echo "ERROR: missing required scdoc binary" >&2; exit 1)
 	@sed "s/##VERSION##/${VERSION}/g; s/##SHA##/${SHA}/g" dewsesh.1.scd.tpl > dewsesh.1.scd
 	@scdoc < dewsesh.1.scd > dewsesh.1.roff
 	@echo "Generating manpage dewsesh.1.roff... DONE" 
