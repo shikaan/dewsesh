@@ -1,8 +1,10 @@
 #include "config.h"
+#include "app.h"
 #include "cli.h"
 #include "color.h"
 #include "log.h"
 #include <assert.h>
+#include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -18,13 +20,13 @@
 #define CONFIG_FONT_ICON "icon"
 #define CONFIG_FONT_SIZE "size"
 
-#define CONFIG_NAMESPACE_ACTIONS "actions"
-#define CONFIG_ACTIONS_LOCK "lock"
-#define CONFIG_ACTIONS_SUSPEND "suspend"
-#define CONFIG_ACTIONS_HIBERNATE "hibernate"
-#define CONFIG_ACTIONS_LOGOUT "logout"
-#define CONFIG_ACTIONS_REBOOT "reboot"
-#define CONFIG_ACTIONS_SHUTDOWN "shutdown"
+#define CONFIG_NAMESPACE_ACTION "action"
+#define CONFIG_ACTION_LOCK "lock"
+#define CONFIG_ACTION_SUSPEND "suspend"
+#define CONFIG_ACTION_HIBERNATE "hibernate"
+#define CONFIG_ACTION_LOGOUT "logout"
+#define CONFIG_ACTION_REBOOT "reboot"
+#define CONFIG_ACTION_SHUTDOWN "shutdown"
 
 #define CONFIG_NAMESPACE_COLOR "color"
 #define CONFIG_COLOR_OVERLAY "overlay"
@@ -56,12 +58,12 @@ static void init(void) {
   config.font.text = "sans-serif";
   config.font.size = 16;
 
-  config.actions[APP_OPTION_LOCK] = "loginctl lock-session";
-  config.actions[APP_OPTION_SUSPEND] = "systemctl suspend-then-hibernate";
-  config.actions[APP_OPTION_HIBERNATE] = "systemctl hibernate";
-  config.actions[APP_OPTION_LOGOUT] = "loginctl terminate-session";
-  config.actions[APP_OPTION_RESTART] = "systemctl reboot";
-  config.actions[APP_OPTION_SHUTDOWN] = "systemctl poweroff";
+  config.action[APP_OPTION_LOCK] = "loginctl lock-session";
+  config.action[APP_OPTION_SUSPEND] = "systemctl suspend-then-hibernate";
+  config.action[APP_OPTION_HIBERNATE] = "systemctl hibernate";
+  config.action[APP_OPTION_LOGOUT] = "loginctl terminate-session";
+  config.action[APP_OPTION_RESTART] = "systemctl reboot";
+  config.action[APP_OPTION_SHUTDOWN] = "systemctl poweroff";
 
   config.color.overlay = 0x000000cc;
   config.color.text = 0xeaeaeaff;
@@ -115,7 +117,7 @@ void cfg_read(const char *path, config_t **cfg) {
   *cfg = &config;
 
   if (!path) {
-    log_info("no configuration path, using defaults", NULL);
+    log_info("no configuration file, using defaults", NULL);
     return;
   }
 
@@ -129,7 +131,7 @@ void cfg_read(const char *path, config_t **cfg) {
   size_t line_size = 0;
   ssize_t nread;
   int line_number = 0;
-  log_debug("config", NULL);
+  log_debug("config file:", NULL);
   while ((nread = getline(&line, &line_size, config_file)) != -1) {
     line_number++;
 
@@ -137,11 +139,11 @@ void cfg_read(const char *path, config_t **cfg) {
       line[--nread] = '\0';
     }
 
+    log_debug("  %d | %s", line_number, line);
     if (!*line || line[0] == CONFIG_COMMENT) {
       continue;
     }
 
-    log_debug("  %d | %s", line_number, line);
     char *separator = strchr(line, CONFIG_VALUE_SEPARATOR);
     if (!separator) {
       log_warn("invalid line (missing %s), skipping", CONFIG_VALUE_SEPARATOR);
@@ -173,13 +175,13 @@ void cfg_read(const char *path, config_t **cfg) {
       }
     }
 
-    if (streql(namespace, CONFIG_NAMESPACE_ACTIONS)) {
-      readstr(config.actions[APP_OPTION_LOCK], CONFIG_ACTIONS_LOCK);
-      readstr(config.actions[APP_OPTION_SUSPEND], CONFIG_ACTIONS_SUSPEND);
-      readstr(config.actions[APP_OPTION_HIBERNATE], CONFIG_ACTIONS_HIBERNATE);
-      readstr(config.actions[APP_OPTION_LOGOUT], CONFIG_ACTIONS_LOGOUT);
-      readstr(config.actions[APP_OPTION_RESTART], CONFIG_ACTIONS_REBOOT);
-      readstr(config.actions[APP_OPTION_SHUTDOWN], CONFIG_ACTIONS_SHUTDOWN);
+    if (streql(namespace, CONFIG_NAMESPACE_ACTION)) {
+      readstr(config.action[APP_OPTION_LOCK], CONFIG_ACTION_LOCK);
+      readstr(config.action[APP_OPTION_SUSPEND], CONFIG_ACTION_SUSPEND);
+      readstr(config.action[APP_OPTION_HIBERNATE], CONFIG_ACTION_HIBERNATE);
+      readstr(config.action[APP_OPTION_LOGOUT], CONFIG_ACTION_LOGOUT);
+      readstr(config.action[APP_OPTION_RESTART], CONFIG_ACTION_REBOOT);
+      readstr(config.action[APP_OPTION_SHUTDOWN], CONFIG_ACTION_SHUTDOWN);
     }
 
     if (streql(namespace, CONFIG_NAMESPACE_COLOR)) {
@@ -197,4 +199,27 @@ void cfg_read(const char *path, config_t **cfg) {
   fclose(config_file);
 #undef readcol
 #undef readstr
+}
+
+void cfg_debug(void) {
+  log_debug("configuration:", NULL);
+  log_debug("  font.text=%s", config.font.text);
+  log_debug("  font.status=%s", config.font.status);
+  log_debug("  font.icon=%s", config.font.icon);
+  log_debug("  font.size=%u", config.font.size);
+
+  log_debug("  action.lock=%s", config.action[APP_OPTION_LOCK]);
+  log_debug("  action.suspend=%s", config.action[APP_OPTION_SUSPEND]);
+  log_debug("  action.hibernate=%s", config.action[APP_OPTION_HIBERNATE]);
+  log_debug("  action.logout=%s", config.action[APP_OPTION_LOGOUT]);
+  log_debug("  action.restart=%s", config.action[APP_OPTION_RESTART]);
+  log_debug("  action.shutdown=%s", config.action[APP_OPTION_SHUTDOWN]);
+
+  log_debug("  color.overlay=0x%08X", config.color.overlay);
+  log_debug("  color.text=0x%08X", config.color.text);
+  log_debug("  color.status=0x%08X", config.color.status);
+  log_debug("  color.error=0x%08X", config.color.error);
+  log_debug("  color.selected=0x%08X", config.color.selected);
+  log_debug("  color.button=0x%08X", config.color.button);
+  log_debug("  color.window=0x%08X", config.color.window);
 }

@@ -2,6 +2,7 @@
 
 #include "app.h"
 #include "color.h"
+#include <stddef.h>
 #include <stdint.h>
 
 typedef struct {
@@ -10,8 +11,8 @@ typedef struct {
     const char *status;
     const char *icon;
     uint32_t size;
-  } font; 
-  const char* actions[APP_OPTIONS];
+  } font;
+  const char *action[APP_OPTIONS];
   struct {
     color_t overlay;
     color_t text;
@@ -25,3 +26,4 @@ typedef struct {
 
 char *cfg_path(void);
 void cfg_read(const char *path, config_t **cfg);
+void cfg_debug(void);

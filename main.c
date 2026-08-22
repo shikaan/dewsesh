@@ -199,7 +199,7 @@ static bool action(void *data) {
   log_debug("launching option %d", state.option);
   (void)data;
 
-  if (spw_launch(config->actions[state.option]) == OK)
+  if (spw_launch(config->action[state.option]) == OK)
     exit(0);
 
   state.status = APP_STATUS_ERRORED;
@@ -342,6 +342,10 @@ int main(int argc, char *const *argv) {
   const char *config_path = cli_opts->config ? cli_opts->config : cfg_path();
   cfg_read(config_path, &config);
   assert(config && "config must be non-null");
+
+  if (cli_opts->debug) {
+    cfg_debug();
+  }
 
   shl_shell_t *shl = NULL;
   if (shl_create(callbacks, &shl) != OK)
