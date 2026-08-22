@@ -42,6 +42,20 @@ WAYLAND_PROTOCOLS_DIR := $(shell pkg-config --variable=pkgdatadir wayland-protoc
 VERSION ?= '"v0.0.0"'
 SHA ?= '"dev"'
 
+.PHONY: all install
+
+all: main
+
+install: BIN_FOLDER := ~/.local/bin
+install: BUILD_TYPE := release
+install:
+	@echo "Installing dewsesh at ${BIN_FOLDER}..."
+	@make -s BUILD_TYPE=release all
+	@mkdir -p ${BIN_FOLDER}
+	@cp ./main ${BIN_FOLDER}/dewsesh
+	@chmod +x ${BIN_FOLDER}/dewsesh
+	@echo "Installing dewsesh at ${BIN_FOLDER}... DONE"
+
 protocols/xdg-shell-protocol.h:
 	wayland-scanner client-header \
 		$(WAYLAND_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml $@
