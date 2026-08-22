@@ -14,7 +14,7 @@
 
 #define CONFIG_NAMESPACE_FONT "font"
 #define CONFIG_FONT_TEXT "text"
-#define CONFIG_FONT_INFO "info"
+#define CONFIG_FONT_STATUS "status"
 #define CONFIG_FONT_ICON "icon"
 #define CONFIG_FONT_SIZE "size"
 
@@ -63,12 +63,12 @@ static void init(void) {
   config.actions[APP_OPTION_RESTART] = "systemctl reboot";
   config.actions[APP_OPTION_SHUTDOWN] = "systemctl poweroff";
 
-  config.color.error = 0xff6b6bff;
-  config.color.text = 0xeaeaeaff;
   config.color.overlay = 0x000000cc;
+  config.color.text = 0xeaeaeaff;
+  config.color.status = 0xc4c8c6ff;
+  config.color.error = 0xff6b6bff;
   config.color.selected = 0x82a2be80;
   config.color.button = 0x00000000;
-  config.color.status = 0xc4c8c6ff;
   config.color.window = 0x00000000;
 }
 
@@ -163,7 +163,7 @@ void cfg_read(const char *path, config_t **cfg) {
 
     if (streql(namespace, CONFIG_NAMESPACE_FONT)) {
       readstr(config.font.text, CONFIG_FONT_TEXT);
-      readstr(config.font.status, CONFIG_FONT_INFO);
+      readstr(config.font.status, CONFIG_FONT_STATUS);
       readstr(config.font.icon, CONFIG_FONT_ICON);
 
       if (streql(key, CONFIG_FONT_SIZE)) {
