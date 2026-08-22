@@ -39,12 +39,12 @@ endif
 
 WAYLAND_PROTOCOLS_DIR := $(shell pkg-config --variable=pkgdatadir wayland-protocols)
 
-VERSION ?= '"v0.0.0"'
-SHA ?= '"dev"'
+VERSION ?= v0.0.0
+SHA ?= dev
 
-.PHONY: all install
+.PHONY: all install docs
 
-all: main
+all: main docs
 
 install: BIN_FOLDER := ~/.local/bin
 install: BUILD_TYPE := release
@@ -55,6 +55,15 @@ install:
 	@cp ./main ${BIN_FOLDER}/dewsesh
 	@chmod +x ${BIN_FOLDER}/dewsesh
 	@echo "Installing dewsesh at ${BIN_FOLDER}... DONE"
+
+docs:
+	@echo "Generating manpage dewsesh.1.roff..." 
+	@which scdoc > /dev/null || echo "ERROR: missing required scdoc binary"
+	@sed "s/##VERSION##/${VERSION}/g; s/##SHA##/${SHA}/g" dewsesh.1.scd.tpl > dewsesh.1.scd
+	@scdoc < dewsesh.1.scd > dewsesh.1.roff
+	@echo "Generating manpage dewsesh.1.roff... DONE" 
+
+# ---------------------
 
 protocols/xdg-shell-protocol.h:
 	wayland-scanner client-header \

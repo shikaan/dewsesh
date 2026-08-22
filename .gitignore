@@ -1,5 +1,7 @@
 main
 **/*.o
+*.roff
+*.scd
 
 protocols/*.c
 protocols/*.h
@@ -9,3 +11,4 @@ compile_commands.json
 .cache
 
 .todo
+
