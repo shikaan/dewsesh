@@ -1,10 +1,16 @@
 from debian:trixie as base
 
 run apt update
+
+# build tools
 run apt install -y \
   build-essential \
   pkg-config \
   git \
+  scdoc 
+
+# dependencies
+run apt install -y \
   wayland-protocols \
   libxkbcommon-dev \
   libwayland-dev \
@@ -14,8 +20,8 @@ entrypoint bash
 
 from base as tooling
 
-run apt update
-run apt install -y \
-  clangd
+# development tools
+run apt install -y clangd
+
 workdir /src
 entrypoint bash
