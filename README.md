@@ -17,7 +17,7 @@ It's compatible with wlroots-based compositors and any other Wayland compositor
 implementing the layer-shell protocol.
 
 > [!NOTE]
-> Some compositors (notably, GNOME) do NOT the layer-shell protocol. Please open
+> Some compositors (notably, GNOME) do NOT implement the layer-shell protocol. Please open
 > an [issue](https://github.com/shikaan/dewsesh/issues) if you'd like to use 
 > dewsesh on one of those compositors.
 
