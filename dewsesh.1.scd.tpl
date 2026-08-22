@@ -13,18 +13,18 @@ dewsesh [_options_]
 dewsesh is a customizable session manager (aka, logout menu) for Wayland
 compositors.
 
-Upon launching, it shows a menu where the user can lock the screen, log out of
-the current session, and suspend, hibernate, reboot, or shutdown the machine.
+Upon launching, it shows a menu to lock the screen, log out, or suspend,
+hibernate, restart, and shut down the machine.
 
-dewsesh is inspired by wlogout and oblogout and aims to provide sensible 
-defaults and improved usability (e.g., confirmation screens).
+dewsesh is inspired by wlogout and oblogout, aiming for sensible defaults and
+improved usability (e.g., confirmation screens).
 
 ## NOTE
-dewsesh uses the layer-shell protocol, which is widely supported by 
+dewsesh uses the layer-shell protocol, which is widely supported by
 wlroots-based compositors. However, GNOME and a few others do NOT support it.
 
-Enhanced compatibiliy can be provided upon request. Please open an issue at 
-https://github.com/shikaan/dewsesh/issues 
+For enhanced compatibility, please open an issue at
+https://github.com/shikaan/dewsesh/issues
 
 # OPTIONS
 
@@ -54,13 +54,13 @@ config file lookup paths.
 
 *font.status* <font family>
 	Sets the font family for status text. Defaults to _monospace_.
-	
+
 *font.icon* <font family>
-	Sets the font family for the the icons. Defaults to _FontAwesome_.
+	Sets the font family for the icons. Defaults to _FontAwesome_.
 
 *font.size* <size>
-	Sets the font size, which is also used to derive the spacing of every
-	other element on the screen. Defaults to _16_.
+	Sets the font size, also used to derive the spacing of every other
+	element on the screen. Defaults to _16_.
 
 *action.lock* <command>
 	Sets the command to lock the screen. Defaults to _loginctl lock-session_.
@@ -73,8 +73,8 @@ config file lookup paths.
 	Sets the command to hibernate the machine. Defaults to _systemctl hibernate_.
 
 *action.logout* <command>
-	Sets the command to logout from the current session. Defaults to _loginctl
-	terminate-session_.
+	Sets the command to log out from the current session. Defaults to
+	_loginctl terminate-session_.
 
 *action.restart* <command>
 	Sets the command to restart the machine. Defaults to _systemctl reboot_.
