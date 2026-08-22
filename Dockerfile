@@ -12,7 +12,6 @@ run apt install -y \
 # dependencies
 run apt install -y \
   wayland-protocols \
-  libxkbcommon-dev \
   libwayland-dev \
   libcairo2-dev
 
