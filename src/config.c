@@ -25,7 +25,7 @@
 #define CONFIG_ACTION_SUSPEND "suspend"
 #define CONFIG_ACTION_HIBERNATE "hibernate"
 #define CONFIG_ACTION_LOGOUT "logout"
-#define CONFIG_ACTION_REBOOT "reboot"
+#define CONFIG_ACTION_RESTART "restart"
 #define CONFIG_ACTION_SHUTDOWN "shutdown"
 
 #define CONFIG_NAMESPACE_COLOR "color"
@@ -180,7 +180,7 @@ void cfg_read(const char *path, config_t **cfg) {
       readstr(config.action[APP_OPTION_SUSPEND], CONFIG_ACTION_SUSPEND);
       readstr(config.action[APP_OPTION_HIBERNATE], CONFIG_ACTION_HIBERNATE);
       readstr(config.action[APP_OPTION_LOGOUT], CONFIG_ACTION_LOGOUT);
-      readstr(config.action[APP_OPTION_RESTART], CONFIG_ACTION_REBOOT);
+      readstr(config.action[APP_OPTION_RESTART], CONFIG_ACTION_RESTART);
       readstr(config.action[APP_OPTION_SHUTDOWN], CONFIG_ACTION_SHUTDOWN);
     }
 
