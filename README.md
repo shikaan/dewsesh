@@ -9,8 +9,7 @@ A minimal, beautiful session manager for Wayland.
 </p>
 
 dewsesh is a customizable session manager for Wayland compositors, inspired by 
-[wlogout](https://github.com/ArtsyMacaw/wlogout) and
-[oblogout](https://github.com/ryukinix/oblogout) with a focus on sensible
+wlogout and oblogout with a focus on sensible
 defaults, minimal dependencies, improved usability (e.g., confirmation screen). 
 
 It's compatible with wlroots-based compositors and any other Wayland compositor
