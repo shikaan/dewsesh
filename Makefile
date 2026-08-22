@@ -40,28 +40,47 @@ endif
 WAYLAND_PROTOCOLS_DIR := $(shell pkg-config --variable=pkgdatadir wayland-protocols)
 
 VERSION ?= v0.0.0
-SHA ?= dev
+SHA ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
-.PHONY: all install docs
+.PHONY: all install docs clean help
 
+### all - build the binary and generate the manpage (default)
 all: main docs
 
+### install - build in release mode and install the executable and manpage
+install: MAN_FOLDER := ~/.local/share/man/man1
 install: BIN_FOLDER := ~/.local/bin
-install: BUILD_TYPE := release
 install:
-	@echo "Installing dewsesh at ${BIN_FOLDER}..."
+	@echo "Installing dewsesh..."
 	@make -s BUILD_TYPE=release all
 	@mkdir -p ${BIN_FOLDER}
 	@cp ./main ${BIN_FOLDER}/dewsesh
 	@chmod +x ${BIN_FOLDER}/dewsesh
-	@echo "Installing dewsesh at ${BIN_FOLDER}... DONE"
+	@echo "Installing dewsesh... DONE"
+	@echo "  Executable: ${BIN_FOLDER}/dewsesh"
+	@if [ -f dewsesh.1.roff ]; then \
+		mkdir -p ${MAN_FOLDER}; \
+		cp dewsesh.1.roff ${MAN_FOLDER}/dewsesh.1; \
+		echo "  Man       : ${MAN_FOLDER}/dewsesh.1"; \
+	fi
 
+### docs - generate the manpage from the scdoc template
 docs:
-	@echo "Generating manpage dewsesh.1.roff..." 
-	@which scdoc > /dev/null || (echo "ERROR: missing required scdoc binary" >&2; exit 1)
-	@sed "s/##VERSION##/${VERSION}/g; s/##SHA##/${SHA}/g" dewsesh.1.scd.tpl > dewsesh.1.scd
-	@scdoc < dewsesh.1.scd > dewsesh.1.roff
-	@echo "Generating manpage dewsesh.1.roff... DONE" 
+	@if command -v scdoc > /dev/null 2>&1; then \
+		echo "Generating manpage dewsesh.1.roff..."; \
+		sed "s/##VERSION##/${VERSION}/g; s/##SHA##/${SHA}/g" dewsesh.1.scd.tpl > dewsesh.1.scd; \
+		scdoc < dewsesh.1.scd > dewsesh.1.roff; \
+		echo "Generating manpage dewsesh.1.roff... DONE"; \
+	else \
+		echo "WARN: Unable to find scdoc. Skipping manpage generation."; \
+	fi
+
+### help - list available targets
+help:
+	@echo "Usage: make [target]"
+	@echo
+	@echo "Targets:"
+	@grep -E '^### ' $(MAKEFILE_LIST) | sed 's/^### /  /'
 
 # ---------------------
 
@@ -117,5 +136,6 @@ main: protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o \
 	protocols/cursor-shape-v1.o src/log.o src/ctx.o src/shell.o src/ui.o \
 	src/spawn.o src/timer.o src/cli.o src/config.o src/app.o
 
+### clean - remove build artifacts
 clean:
 	rm -f main *.o src/*.o protocols/*.c protocols/*.h
