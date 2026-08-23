@@ -3,49 +3,115 @@
 #include "cairo-ft.h"
 #include "cairo.h"
 #include "log.h"
+#include "result.h"
 #include "../assets/font-awesome-v4.h"
 #include <ft2build.h>
 #include FT_FREETYPE_H
 #include <stdbool.h>
 #include <stddef.h>
 
+enum { FONTS = 3 };
+
+struct ui_font {
+  cairo_font_face_t *face[UI_TXT_WEIGHTS];
+};
+
 static cairo_t *cairo;
+static cairo_font_options_t *font_options = NULL;
+static struct ui_font fonts[FONTS] = {0};
+static size_t nfonts = 0;
 
-static cairo_font_face_t *load_default_icons(void) {
-  static cairo_font_face_t *face = NULL;
-  static bool attempted = false;
+static result_t font_alloc(ui_font_t **font) {
+  assert(font && "font must be non-null");
 
-  if (attempted) {
-    return face;
+  if (nfonts == FONTS) {
+    log_error("cannot register font. Fonts list is full %d", FONTS);
+    return ERR_UI_TOO_MANY_FONTS;
   }
-  attempted = true;
 
+  *font = &fonts[nfonts++];
+  return OK;
+}
+
+result_t ui_font_family(const char *family, ui_font_t **font) {
+  assert(family && "family must be non-null");
+
+  static const cairo_font_weight_t weights[UI_TXT_WEIGHTS] = {
+      [UI_TXT_WEIGHT_NORMAL] = CAIRO_FONT_WEIGHT_NORMAL,
+      [UI_TXT_WEIGHT_BOLD] = CAIRO_FONT_WEIGHT_BOLD,
+  };
+
+  result_t result = font_alloc(font);
+  if (result != OK) {
+    return result;
+  }
+
+  for (size_t i = 0; i < UI_TXT_WEIGHTS; i++) {
+    cairo_font_face_t *face =
+        cairo_toy_font_face_create(family, CAIRO_FONT_SLANT_NORMAL, weights[i]);
+
+    if (cairo_font_face_status(face) != CAIRO_STATUS_SUCCESS) {
+      log_error("failed to create font face for family '%s'", family);
+      return ERR_UI_FONT;
+    }
+
+    (*font)->face[i] = face;
+  }
+
+  return OK;
+}
+
+result_t ui_font_embedded(ui_font_t **font) {
   FT_Library library;
   if (FT_Init_FreeType(&library)) {
     log_error("failed to initialize freetype", NULL);
-    return NULL;
+    return ERR_UI_FONT;
   }
 
   FT_Face ft_face;
   if (FT_New_Memory_Face(library, (const FT_Byte *)fontawesome_bytes,
                          (FT_Long)fontawesome_bytes_len, 0, &ft_face)) {
     log_error("failed to load embedded icon font", NULL);
-    return NULL;
+    return ERR_UI_FONT;
   }
 
-  face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+  cairo_font_face_t *face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
   if (cairo_font_face_status(face) != CAIRO_STATUS_SUCCESS) {
-    log_error("failed to create cairo font face for embedded icon font",
-              NULL);
-    face = NULL;
+    log_error("failed to create cairo font face for embedded icon font", NULL);
+    return ERR_UI_FONT;
   }
 
-  return face;
+  result_t result = font_alloc(font);
+  if (result != OK) {
+    return result;
+  }
+
+  for (size_t i = 0; i < UI_TXT_WEIGHTS; i++) {
+    (*font)->face[i] = face;
+  }
+
+  return OK;
 }
 
-void ui_init(ctx_t *c, color_t background) {
+result_t ui_init(void) {
+  font_options = cairo_font_options_create();
+  if (cairo_font_options_status(font_options) != CAIRO_STATUS_SUCCESS) {
+    log_error("failed to create font options", NULL);
+    return ERR_UI;
+  }
+
+  cairo_font_options_set_hint_style(font_options, CAIRO_HINT_STYLE_FULL);
+  cairo_font_options_set_antialias(font_options, CAIRO_ANTIALIAS_SUBPIXEL);
+
+  return OK;
+}
+
+void ui_start_frame(ctx_t *c, color_t background) {
+  assert(font_options && "ui_init must be called before drawing");
+
   cairo = c->cairo.ctx;
   cairo_set_antialias(cairo, CAIRO_ANTIALIAS_BEST);
+  cairo_set_font_options(cairo, font_options);
   cairo_identity_matrix(cairo);
 
   cairo_save(cairo);
@@ -67,27 +133,9 @@ void ui_set_source_color(color_t color) {
 void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *bounds) {
   assert(bounds && "rect must be non-null");
   assert(cairo && "cairo must be non-null");
+  assert(opts.font && "font must be non-null");
 
-  cairo_font_options_t *font_options = cairo_font_options_create();
-
-  cairo_font_options_set_hint_style(font_options, CAIRO_HINT_STYLE_FULL);
-  cairo_font_options_set_antialias(font_options, CAIRO_ANTIALIAS_SUBPIXEL);
-
-  cairo_set_font_options(cairo, font_options);
-  if (opts.family) {
-    cairo_select_font_face(cairo, opts.family, CAIRO_FONT_SLANT_NORMAL,
-                           opts.weight == UI_TXT_WEIGHT_BOLD
-                               ? CAIRO_FONT_WEIGHT_BOLD
-                               : CAIRO_FONT_WEIGHT_NORMAL);
-  } else {
-    cairo_font_face_t *icons = load_default_icons();
-    if (icons) {
-      cairo_set_font_face(cairo, icons);
-    } else {
-      cairo_select_font_face(cairo, "sans-serif", CAIRO_FONT_SLANT_NORMAL,
-                             CAIRO_FONT_WEIGHT_NORMAL);
-    }
-  }
+  cairo_set_font_face(cairo, opts.font->face[opts.weight]);
   cairo_set_font_size(cairo, opts.size);
   ui_set_source_color(opts.color);
 
@@ -97,8 +145,6 @@ void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *bounds) {
   bounds->height = ext.height;
   bounds->width = ext.width;
   bounds->y_bearing = ext.y_bearing;
-
-  cairo_font_options_destroy(font_options);
 }
 
 void ui_txt_commit(ui_txt_t opts, double x, double y,
@@ -149,12 +195,12 @@ void ui_btn(ui_btn_t opts, double x, double y, double w, double h,
   ui_txt_t icon_opts = {
       .color = opts.color[status].fg,
       .size = opts.size * 1.75,
-      .family = opts.icon_family,
+      .font = opts.icon,
       .weight = UI_TXT_WEIGHT_NORMAL,
       .align = UI_TXT_ALIGN_CENTER,
   };
   ui_txt_t label_opts = icon_opts;
-  label_opts.family = opts.text_family;
+  label_opts.font = opts.text;
   label_opts.size = opts.size;
 
   ui_txt_bounds_t icon_bounds, label_bounds;

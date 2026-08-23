@@ -23,5 +23,9 @@ typedef enum {
   ERR_TMR_TOO_MANY_TIMERS,
   ERR_TMR_NOT_FOUND,
 
+  ERR_UI,
+  ERR_UI_TOO_MANY_FONTS,
+  ERR_UI_FONT,
+
   RESULTS
 } result_t;
