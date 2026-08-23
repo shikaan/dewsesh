@@ -56,7 +56,8 @@ config file lookup paths.
 	Sets the font family for status text. Defaults to _monospace_.
 
 *font.icon* <font family>
-	Sets the font family for the icons. Defaults to _FontAwesome_.
+	Sets the font family for the icons. If unset (the default), a bundled
+	icon font is used instead.
 
 *font.size* <size>
 	Sets the font size, also used to derive the spacing of every other
@@ -111,7 +112,6 @@ An empty configuration file is equivalent to the following configuration:
 ```
 font.text=sans-serif
 font.status=monospace
-font.icon=FontAwesome
 font.size=16
 
 action.lock=loginctl lock-session

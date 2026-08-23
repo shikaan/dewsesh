@@ -53,7 +53,7 @@ static inline bool streql(const char *a, const char *b) {
 }
 
 static void init(void) {
-  config.font.icon = "FontAwesome";
+  config.font.icon = NULL; // use embedded
   config.font.status = "monospace";
   config.font.text = "sans-serif";
   config.font.size = 16;
