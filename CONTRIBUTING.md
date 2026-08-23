@@ -66,3 +66,30 @@ podman exec -i dewsesh clangd \
     --background-index \
     --path-mappings=<local-path-to-dewsesh>/dewsesh=/src"
 ```
+
+## Appendix: house style
+
+* **No or very short comments** The code is the documentation; rationale belongs
+  in commit messages and pull requests, where it can be read and discussed.
+
+* **Allocate at startup.** Everything is allocated before the event loop, from
+  fixed static pools sized to what the program actually needs (see `src/timer.c`
+  and `src/ui.c`). Nothing allocates per frame or per event. If a library gives
+  you no choice (cairo, for one), do it once, as early as it allows.
+
+* **Fallible functions return `result_t`,** with the destination as the last
+  argument: `result_t ui_font_family(const char *family, ui_font_t **font)`. If
+  it can't fail, return `void`. New codes go in `src/result.h`, grouped by
+  module under a bare `ERR_<MOD>`.
+
+* **Log where it breaks.** The function that detects a failure logs it, right
+  next to its `return ERR_...`; callers just propagate. The exception is a
+  caller that changes behaviour: a fallback, a retry, or a degraded mode will
+  log what they are doing instead.
+
+* **Modules hide their dependencies.** Public headers don't name types from the
+  libraries behind them: `src/ui.h` has `typedef struct ui_font ui_font_t;` and
+  keeps cairo inside `src/ui.c`.
+
+* **Skip the indirection.** One of something? A file-scope `static`, assigned in
+  the module's init function. No getter, no lazy init.
