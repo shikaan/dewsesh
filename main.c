@@ -46,6 +46,35 @@ static rect_t btn_hit_targets[APP_OPTIONS];
 
 static config_t *config = NULL;
 
+static struct {
+  ui_font_t *text;
+  ui_font_t *status;
+  ui_font_t *icon;
+} fonts = {0};
+
+static result_t load_fonts(void) {
+  result_t r = ui_font_family(config->font.text, &fonts.text);
+  if (r != OK) {
+    return r;
+  }
+
+  r = ui_font_family(config->font.status, &fonts.status);
+  if (r != OK) {
+    return r;
+  }
+
+  if (config->font.icon) {
+    return ui_font_family(config->font.icon, &fonts.icon);
+  }
+
+  if (ui_font_embedded(&fonts.icon) != OK) {
+    log_warn("falling back to system font for icons", NULL);
+    return ui_font_family("sans-serif", &fonts.icon);
+  }
+
+  return OK;
+}
+
 static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   static char msg[128];
   static char name[32];
@@ -58,7 +87,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
   memset(btn_hit_targets, 0, sizeof(btn_hit_targets));
 
-  ui_init(*ctx, config->color.overlay);
+  ui_start_frame(*ctx, config->color.overlay);
   const double vspace = config->font.size * 1.5;
   const double hspace = config->font.size * 2.5;
 
@@ -91,7 +120,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
   ui_txt_t txt_opts = {
       .color = config->color.text,
       .size = config->font.size,
-      .family = config->font.status,
+      .font = fonts.status,
       .weight = UI_TXT_WEIGHT_BOLD,
       .align = UI_TXT_ALIGN_CENTER,
   };
@@ -102,7 +131,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
   if (state.status == APP_STATUS_INHIBIT) {
     txt_opts.size = config->font.size * 3;
-    txt_opts.family = config->font.text;
+    txt_opts.font = fonts.text;
     txt_opts.weight = UI_TXT_WEIGHT_BOLD;
     txt_opts.align = UI_TXT_ALIGN_CENTER;
 
@@ -129,8 +158,8 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     ui_txt_commit(txt_opts, framex + framew / 2, msgy, &msg_bounds, msg);
   } else {
     ui_btn_t btn_opts = {
-        .icon_family = config->font.icon,
-        .text_family = config->font.text,
+        .icon = fonts.icon,
+        .text = fonts.text,
         .size = config->font.size,
         .color =
             {
@@ -171,7 +200,7 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
 
   const char *status = NULL;
   if (state.status == APP_STATUS_ERRORED) {
-    txt_opts.family = config->font.text;
+    txt_opts.font = fonts.text;
     txt_opts.color = config->color.error;
     txt_opts.weight = UI_TXT_WEIGHT_BOLD;
 
@@ -180,12 +209,12 @@ static void handle_draw(uint32_t w, uint32_t h, ctx_t **ctx) {
     status = msg;
   } else if (state.status == APP_STATUS_INHIBIT) {
     status = "ENTER Confirm · ESC Cancel";
-    txt_opts.family = config->font.status;
+    txt_opts.font = fonts.status;
     txt_opts.color = config->color.status;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   } else {
     status = "ARROWS Move · ENTER Confirm · ESC Cancel";
-    txt_opts.family = config->font.status;
+    txt_opts.font = fonts.status;
     txt_opts.color = config->color.status;
     txt_opts.weight = UI_TXT_WEIGHT_NORMAL;
   }
@@ -346,6 +375,12 @@ int main(int argc, char *const *argv) {
   if (cli_opts->debug) {
     cfg_debug();
   }
+
+  if (ui_init() != OK)
+    return 1;
+
+  if (load_fonts() != OK)
+    return 1;
 
   shl_shell_t *shl = NULL;
   if (shl_create(callbacks, &shl) != OK)

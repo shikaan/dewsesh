@@ -2,6 +2,7 @@
 
 #include "ctx.h"
 #include "color.h"
+#include "result.h"
 #include <stdint.h>
 
 typedef enum {
@@ -13,12 +14,19 @@ typedef enum {
 typedef enum {
   UI_TXT_WEIGHT_NORMAL,
   UI_TXT_WEIGHT_BOLD,
+
+  UI_TXT_WEIGHTS
 } ui_txt_weight_t;
+
+typedef struct ui_font ui_font_t;
+
+result_t ui_font_family(const char *family, ui_font_t **font);
+result_t ui_font_embedded(ui_font_t **font);
 
 typedef struct {
   color_t color;
   double size;
-  const char *family;
+  const ui_font_t *font;
   ui_txt_weight_t weight;
   ui_txt_align_t align;
 } ui_txt_t;
@@ -28,7 +36,9 @@ typedef struct {
   double y_bearing;
 } ui_txt_bounds_t;
 
-void ui_init(ctx_t *c, color_t background);
+result_t ui_init(void);
+
+void ui_start_frame(ctx_t *c, color_t background);
 
 void ui_set_source_color(color_t color);
 
@@ -54,8 +64,8 @@ typedef struct {
 } ui_btn_colors_t;
 
 typedef struct {
-  const char *text_family;
-  const char *icon_family;
+  const ui_font_t *text;
+  const ui_font_t *icon;
   uint32_t size;
   ui_btn_colors_t color[UI_BTN_STATUSES];
 } ui_btn_t;
