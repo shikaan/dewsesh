@@ -125,7 +125,7 @@ protocols/cursor-shape-v1.o: protocols/cursor-shape-v1.h \
 	protocols/cursor-shape-v1.c
 
 src/cli:
-src/ui.o: src/ctx.o
+src/ui.o: src/ctx.o src/log.o
 src/ctx.o: src/log.o
 src/timer.o: src/log.o
 src/shell.o: src/log.o src/timer.o src/ctx.o \
@@ -133,9 +133,9 @@ src/shell.o: src/log.o src/timer.o src/ctx.o \
 src/spawn.o: src/log.o
 src/config.o: src/log.o
 
-main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo) \
+main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo freetype2) \
 	-isystem protocols -DVERSION='"$(VERSION)"' -DSHA='"$(SHA)"'
-main: LDLIBS += $(shell pkg-config --libs wayland-client cairo)
+main: LDLIBS += $(shell pkg-config --libs wayland-client cairo freetype2)
 main: protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o \
 	protocols/cursor-shape-v1.o src/log.o src/ctx.o src/shell.o src/ui.o \
 	src/spawn.o src/timer.o src/cli.o src/config.o src/app.o

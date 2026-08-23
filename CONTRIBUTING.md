@@ -31,6 +31,7 @@ Dependencies:
 * wayland-client
 * wayland-protocols \*
 * cairo
+* freetype2
 
 _\* Compile-time dep_
 

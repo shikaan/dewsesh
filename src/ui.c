@@ -1,9 +1,47 @@
 #include "ui.h"
 #include "assert.h"
+#include "cairo-ft.h"
 #include "cairo.h"
+#include "log.h"
+#include "../assets/font-awesome-v4.h"
+#include <ft2build.h>
+#include FT_FREETYPE_H
+#include <stdbool.h>
 #include <stddef.h>
 
 static cairo_t *cairo;
+
+static cairo_font_face_t *load_default_icons(void) {
+  static cairo_font_face_t *face = NULL;
+  static bool attempted = false;
+
+  if (attempted) {
+    return face;
+  }
+  attempted = true;
+
+  FT_Library library;
+  if (FT_Init_FreeType(&library)) {
+    log_error("failed to initialize freetype", NULL);
+    return NULL;
+  }
+
+  FT_Face ft_face;
+  if (FT_New_Memory_Face(library, (const FT_Byte *)fontawesome_bytes,
+                         (FT_Long)fontawesome_bytes_len, 0, &ft_face)) {
+    log_error("failed to load embedded icon font", NULL);
+    return NULL;
+  }
+
+  face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
+  if (cairo_font_face_status(face) != CAIRO_STATUS_SUCCESS) {
+    log_error("failed to create cairo font face for embedded icon font",
+              NULL);
+    face = NULL;
+  }
+
+  return face;
+}
 
 void ui_init(ctx_t *c, color_t background) {
   cairo = c->cairo.ctx;
@@ -36,10 +74,20 @@ void ui_txt_init(ui_txt_t opts, const char *text, ui_txt_bounds_t *bounds) {
   cairo_font_options_set_antialias(font_options, CAIRO_ANTIALIAS_SUBPIXEL);
 
   cairo_set_font_options(cairo, font_options);
-  cairo_select_font_face(cairo, opts.family, CAIRO_FONT_SLANT_NORMAL,
-                         opts.weight == UI_TXT_WEIGHT_BOLD
-                             ? CAIRO_FONT_WEIGHT_BOLD
-                             : CAIRO_FONT_WEIGHT_NORMAL);
+  if (opts.family) {
+    cairo_select_font_face(cairo, opts.family, CAIRO_FONT_SLANT_NORMAL,
+                           opts.weight == UI_TXT_WEIGHT_BOLD
+                               ? CAIRO_FONT_WEIGHT_BOLD
+                               : CAIRO_FONT_WEIGHT_NORMAL);
+  } else {
+    cairo_font_face_t *icons = load_default_icons();
+    if (icons) {
+      cairo_set_font_face(cairo, icons);
+    } else {
+      cairo_select_font_face(cairo, "sans-serif", CAIRO_FONT_SLANT_NORMAL,
+                             CAIRO_FONT_WEIGHT_NORMAL);
+    }
+  }
   cairo_set_font_size(cairo, opts.size);
   ui_set_source_color(opts.color);
 

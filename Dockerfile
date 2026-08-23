@@ -13,7 +13,8 @@ run apt install -y \
 run apt install -y \
   wayland-protocols \
   libwayland-dev \
-  libcairo2-dev
+  libcairo2-dev \
+  libfreetype-dev
 
 entrypoint bash
 
