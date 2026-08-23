@@ -56,8 +56,7 @@ config file lookup paths.
 	Sets the font family for status text. Defaults to _monospace_.
 
 *font.icon* <font family>
-	Sets the font family for the icons. If unset (the default), a bundled
-	icon font is used instead.
+	Sets the font family for the icons. Defaults to a bundled icon set.
 
 *font.size* <size>
 	Sets the font size, also used to derive the spacing of every other
