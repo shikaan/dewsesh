@@ -79,8 +79,18 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
+          name: dewsesh-linux-amd64
           path: dist
-          merge-multiple: true
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: dewsesh-linux-arm64
+          path: dist
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: manpage
+          path: dist
 
       - name: Attach the binaries to the release
         env:
