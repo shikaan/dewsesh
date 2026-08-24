@@ -363,9 +363,9 @@ int main(int argc, char *const *argv) {
   assert(cli_opts && "cli_opts must be non-null");
 
   log_init(cli_opts->debug ? LOG_LEVEL_DEBUG : LOG_LEVEL_INFO);
-  log_debug("cli options: configuration = '%s'",
-            cli_opts->config ? cli_opts->config : "(nil)");
-  log_debug("cli options: debug = %s", cli_opts->debug ? "true" : "false");
+  log_debug("cli options: configuration=%s",
+            cli_opts->config ? cli_opts->config : "(null)");
+  log_debug("cli options: debug=%s", cli_opts->debug ? "true" : "false");
 
   const char *config_path = cli_opts->config ? cli_opts->config : cfg_path();
   cfg_read(config_path, &config);
