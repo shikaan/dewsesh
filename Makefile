@@ -74,6 +74,7 @@ install: MAN_FOLDER := ~/.local/share/man/man1
 install: BIN_FOLDER := ~/.local/bin
 install:
 	@echo "Installing dewsesh..."
+	@make -s clean
 	@make -s BUILD_TYPE=release all
 	@mkdir -p ${BIN_FOLDER}
 	@cp ./main ${BIN_FOLDER}/dewsesh
