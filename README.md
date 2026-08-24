@@ -22,6 +22,27 @@ For a manual installation, grab a binary from the
 [releases](https://github.com/shikaan/dewsesh/releases) page. To build from
 source, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
+### Shell completions
+
+Optionally, you can install shell completions:
+
+```sh
+# bash
+curl -sL --create-dirs \
+  https://raw.githubusercontent.com/shikaan/dewsesh/main/completions/dewsesh.bash \
+  -o ~/.local/share/bash-completion/completions/dewsesh
+
+# zsh - any directory on your $fpath works
+curl -sL --create-dirs \
+  https://raw.githubusercontent.com/shikaan/dewsesh/main/completions/dewsesh.zsh \
+  -o ~/.local/share/zsh/site-functions/_dewsesh
+
+# fish
+curl -sL --create-dirs \
+  https://raw.githubusercontent.com/shikaan/dewsesh/main/completions/dewsesh.fish \
+  -o ~/.config/fish/completions/dewsesh.fish
+```
+
 ## Usage
 
 ```sh
