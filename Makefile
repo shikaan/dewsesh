@@ -149,7 +149,7 @@ protocols/cursor-shape-v1.o: protocols/cursor-shape-v1.h \
 
 src/cli:
 main.o: protocols/wlr-layer-shell-unstable-v1.h
-src/ui.o: src/ctx.o src/log.o
+src/ui.o: src/ctx.o src/log.o assets/font-awesome-v4.h
 src/ctx.o: src/log.o
 src/timer.o: src/log.o
 src/shell.o: src/log.o src/timer.o src/ctx.o \
