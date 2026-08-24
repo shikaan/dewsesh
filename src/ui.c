@@ -18,6 +18,7 @@ struct ui_font {
 
 static cairo_t *cairo;
 static cairo_font_options_t *font_options = NULL;
+static FT_Library ft_library = NULL;
 static struct ui_font fonts[FONTS] = {0};
 static size_t nfonts = 0;
 
@@ -62,14 +63,10 @@ result_t ui_font_family(const char *family, ui_font_t **font) {
 }
 
 result_t ui_font_embedded(ui_font_t **font) {
-  FT_Library library;
-  if (FT_Init_FreeType(&library)) {
-    log_error("failed to initialize freetype", NULL);
-    return ERR_UI_FONT;
-  }
+  assert(ft_library && "ui_init must be called before loading fonts");
 
   FT_Face ft_face;
-  if (FT_New_Memory_Face(library, (const FT_Byte *)fontawesome_bytes,
+  if (FT_New_Memory_Face(ft_library, (const FT_Byte *)fontawesome_bytes,
                          (FT_Long)fontawesome_bytes_len, 0, &ft_face)) {
     log_error("failed to load embedded icon font", NULL);
     return ERR_UI_FONT;
@@ -78,6 +75,7 @@ result_t ui_font_embedded(ui_font_t **font) {
   cairo_font_face_t *face = cairo_ft_font_face_create_for_ft_face(ft_face, 0);
   if (cairo_font_face_status(face) != CAIRO_STATUS_SUCCESS) {
     log_error("failed to create cairo font face for embedded icon font", NULL);
+    FT_Done_Face(ft_face);
     return ERR_UI_FONT;
   }
 
@@ -94,6 +92,11 @@ result_t ui_font_embedded(ui_font_t **font) {
 }
 
 result_t ui_init(void) {
+  if (FT_Init_FreeType(&ft_library)) {
+    log_error("failed to initialize freetype", NULL);
+    return ERR_UI;
+  }
+
   font_options = cairo_font_options_create();
   if (cairo_font_options_status(font_options) != CAIRO_STATUS_SUCCESS) {
     log_error("failed to create font options", NULL);
