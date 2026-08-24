@@ -205,7 +205,7 @@ void cfg_debug(void) {
   log_debug("configuration:", NULL);
   log_debug("  font.text=%s", config.font.text);
   log_debug("  font.status=%s", config.font.status);
-  log_debug("  font.icon=%s", config.font.icon);
+  log_debug("  font.icon=%s", config.font.icon ? config.font.icon : "(null)");
   log_debug("  font.size=%u", config.font.size);
 
   log_debug("  action.lock=%s", config.action[APP_OPTION_LOCK]);
