@@ -2,6 +2,7 @@ main
 **/*.o
 *.roff
 *.scd
+dist
 
 protocols/*.c
 protocols/*.h
@@ -12,3 +13,4 @@ compile_commands.json
 
 .todo
 
+build
