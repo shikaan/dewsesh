@@ -22,7 +22,7 @@ static FT_Library ft_library = NULL;
 static struct ui_font fonts[FONTS] = {0};
 static size_t nfonts = 0;
 
-static result_t font_alloc(ui_font_t **font) {
+static result_t font_slot(ui_font_t **font) {
   assert(font && "font must be non-null");
 
   if (nfonts == FONTS) {
@@ -30,7 +30,7 @@ static result_t font_alloc(ui_font_t **font) {
     return ERR_UI_TOO_MANY_FONTS;
   }
 
-  *font = &fonts[nfonts++];
+  *font = &fonts[nfonts];
   return OK;
 }
 
@@ -42,7 +42,7 @@ result_t ui_font_family(const char *family, ui_font_t **font) {
       [UI_TXT_WEIGHT_BOLD] = CAIRO_FONT_WEIGHT_BOLD,
   };
 
-  result_t result = font_alloc(font);
+  result_t result = font_slot(font);
   if (result != OK) {
     return result;
   }
@@ -59,6 +59,7 @@ result_t ui_font_family(const char *family, ui_font_t **font) {
     (*font)->face[i] = face;
   }
 
+  nfonts++;
   return OK;
 }
 
@@ -79,8 +80,10 @@ result_t ui_font_embedded(ui_font_t **font) {
     return ERR_UI_FONT;
   }
 
-  result_t result = font_alloc(font);
+  result_t result = font_slot(font);
   if (result != OK) {
+    cairo_font_face_destroy(face);
+    FT_Done_Face(ft_face);
     return result;
   }
 
@@ -88,6 +91,7 @@ result_t ui_font_embedded(ui_font_t **font) {
     (*font)->face[i] = face;
   }
 
+  nfonts++;
   return OK;
 }
 
