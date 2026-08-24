@@ -1,0 +1,14 @@
+.git
+.github
+.cache
+.clangd
+.nvim.lua
+.todo
+compile_commands.json
+screenshot.png
+
+main
+*.o
+src/*.o
+protocols/*.c
+protocols/*.h

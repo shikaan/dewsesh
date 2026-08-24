@@ -1,0 +1,33 @@
+from alpine:3.22 as builder
+
+run apk add --no-cache \
+  build-base \
+  pkgconf \
+  scdoc
+
+run apk add --no-cache \
+  wayland-dev \
+  wayland-protocols \
+  wayland-static \
+  cairo-dev \
+  cairo-static \
+  freetype-dev \
+  freetype-static \
+  fontconfig-static \
+  pixman-static \
+  libpng-static \
+  zlib-static \
+  expat-static \
+  brotli-static \
+  bzip2-static
+
+arg VERSION=v0.0.0
+arg SHA=dev
+
+workdir /src
+copy . .
+run make BUILD_TYPE=release STATIC=1 VERSION=${VERSION} SHA=${SHA}
+
+from scratch
+copy --from=builder /src/main /dewsesh
+copy --from=builder /src/dewsesh.1.roff /dewsesh.1

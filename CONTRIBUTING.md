@@ -54,6 +54,24 @@ podman build . -t dewsesh
 podman run --rm -it -v "$(pwd):/src:Z" --name dewsesh dewsesh
 ```
 
+## Making a static binary
+
+Releases ship a single statically linked executable, built against musl inside
+Alpine by [Dockerfile.static](./Dockerfile.static).
+
+```sh
+podman build . -f Dockerfile.static -o dist
+```
+
+That writes `dist/dewsesh` and `dist/dewsesh.1`.
+
+> [!NOTE]
+> Outside the image, `make STATIC=1` switches `pkg-config` to `--static` and 
+> adds `-static` to the link. It needs static libraries for every dependency, 
+> which most distributions do not package.
+>
+> Use a [dynamic build](#building-from-source-container) for local development
+
 ## Using LSPs
 
 You can get LSP (clangd) support from the running container like this

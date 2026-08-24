@@ -1,0 +1,95 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Resolve version
+        id: version
+        run: |
+          sha="$(git rev-parse --short HEAD)"
+          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=v0.0.0-${sha}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build dewsesh
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.static
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            SHA=${{ steps.version.outputs.sha }}
+          outputs: type=local,dest=build
+          cache-from: type=gha,scope=static-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=static-${{ matrix.arch }}
+
+      - name: Name the binary after its architecture
+        run: mv build/dewsesh "build/dewsesh-linux-${{ matrix.arch }}"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dewsesh-linux-${{ matrix.arch }}
+          path: build/dewsesh-linux-${{ matrix.arch }}
+          if-no-files-found: error
+
+      - name: Archive man pages
+        if: matrix.arch == 'amd64'
+        run: tar -cf dewsesh.1.tar -C build dewsesh.1
+
+      - uses: actions/upload-artifact@v4
+        if: matrix.arch == 'amd64'
+        with:
+          name: manpage
+          path: dewsesh.1.tar
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'release'
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+
+      - name: Attach the binaries to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          ls -l dist
+          gh release upload "${{ github.event.release.tag_name }}" \
+            dist/dewsesh-linux-amd64 \
+            dist/dewsesh-linux-arm64 \
+            dist/dewsesh.1.tar \
+            --clobber

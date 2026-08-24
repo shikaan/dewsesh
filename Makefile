@@ -25,14 +25,36 @@ COMMON_CFLAGS := -std=c11 \
 	-Wno-ignored-qualifiers \
 	-Wno-aggregate-return
 
-DEBUG_CFLAGS := -g -O0 -fsanitize=address,undefined -DDEBUG
+SANITIZERS := -fsanitize=address,undefined
+
+DEBUG_CFLAGS := -g -O0 $(SANITIZERS) -DDEBUG
 
 RELEASE_CFLAGS := -O2 -DNDEBUG
 
 ifeq ($(BUILD_TYPE),release)
     CFLAGS := $(COMMON_CFLAGS) $(RELEASE_CFLAGS)
+    LDFLAGS += -s
 else
     CFLAGS := $(COMMON_CFLAGS) $(DEBUG_CFLAGS)
+    LDFLAGS += $(SANITIZERS)
+endif
+
+STATIC ?= 0
+
+DEPS := wayland-client cairo freetype2
+
+ifeq ($(STATIC),1)
+    LDFLAGS += -static
+    DEPS_CFLAGS := $(shell pkg-config --static --cflags $(DEPS))
+    # cairo advertises its Xlib and XCB backends in Libs.private. dewsesh never
+    # calls them, and Alpine ships no libXau.a, so the link would fail on a
+    # library the binary does not use.
+    X11_LIBS := -lX11 -lXext -lXrender -lXau -lXdmcp \
+	-lxcb -lxcb-render -lxcb-shm
+    DEPS_LIBS := $(filter-out $(X11_LIBS),$(shell pkg-config --static --libs $(DEPS)))
+else
+    DEPS_CFLAGS := $(shell pkg-config --cflags $(DEPS))
+    DEPS_LIBS := $(shell pkg-config --libs $(DEPS))
 endif
 
 # ------------------
@@ -125,6 +147,7 @@ protocols/cursor-shape-v1.o: protocols/cursor-shape-v1.h \
 	protocols/cursor-shape-v1.c
 
 src/cli:
+main.o: protocols/wlr-layer-shell-unstable-v1.h
 src/ui.o: src/ctx.o src/log.o
 src/ctx.o: src/log.o
 src/timer.o: src/log.o
@@ -133,10 +156,12 @@ src/shell.o: src/log.o src/timer.o src/ctx.o \
 src/spawn.o: src/log.o
 src/config.o: src/log.o
 
-main: CFLAGS += $(shell pkg-config --cflags wayland-client cairo freetype2) \
+main: CFLAGS += $(DEPS_CFLAGS) \
 	-isystem protocols -DVERSION='"$(VERSION)"' -DSHA='"$(SHA)"'
-main: LDLIBS += $(shell pkg-config --libs wayland-client cairo freetype2)
-main: protocols/wlr-layer-shell-unstable-v1.o protocols/xdg-shell-protocol.o \
-	protocols/cursor-shape-v1.o src/log.o src/ctx.o src/shell.o src/ui.o \
-	src/spawn.o src/timer.o src/cli.o src/config.o src/app.o
+main: LDLIBS += $(DEPS_LIBS)
+main: main.o protocols/wlr-layer-shell-unstable-v1.o \
+	protocols/xdg-shell-protocol.o protocols/cursor-shape-v1.o src/log.o \
+	src/ctx.o src/shell.o src/ui.o src/spawn.o src/timer.o src/cli.o \
+	src/config.o src/app.o
+	$(CC) $(LDFLAGS) $^ $(LDLIBS) -o $@
 
