@@ -136,4 +136,8 @@ color.window=00000000
 	Project homepage: _https://github.com/shikaan/dewsesh_
 
 # LICENSE
-	MIT
+	dewsesh is MIT licensed.
+
+	The bundled Font Awesome 4.7.0 icon font is licensed separately under
+	the SIL Open Font License 1.1 _https://scripts.sil.org/OFL_. Full text:
+	_https://github.com/shikaan/dewsesh/blob/##VERSION##/LICENSE_

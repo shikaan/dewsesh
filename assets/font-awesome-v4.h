@@ -1,4 +1,5 @@
-// Generated with xxd -i from the Font Awesome 4.7.0 TTF.
+// Generated with xxd -i from fontawesome-webfont.ttf (Font Awesome 4.7.0),
+// as shipped by Debian's fonts-font-awesome-legacy.
 // See font-awesome-v4-copyright for licensing.
 const unsigned char fontawesome_bytes[] = {
   0x00, 0x01, 0x00, 0x00, 0x00, 0x0d, 0x00, 0x80, 0x00, 0x03, 0x00, 0x50,
