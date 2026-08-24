@@ -9,7 +9,6 @@
 #include "src/timer.h"
 #include "src/ui.h"
 #include <assert.h>
-#include <cairo/cairo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>
