@@ -3,10 +3,10 @@ _dewsesh() {
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
   prev="${COMP_WORDS[COMP_CWORD - 1]}"
-  opts="-c --configure -d --debug -h --help -v --version"
+  opts="-c --config -d --debug -h --help -v --version"
 
   case "$prev" in
-    -c|--configure)
+    -c|--config)
       COMPREPLY=($(compgen -f -- "$cur"))
       return
       ;;
