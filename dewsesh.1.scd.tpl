@@ -28,7 +28,7 @@ https://github.com/shikaan/dewsesh/issues
 
 # OPTIONS
 
-*-c, --configure* <path>
+*-c, --config* <path>
 	The config file to use. By default, the following paths are checked:
 	_$XDG\_CONFIG\_HOME/dewsesh/config_ (or _$HOME/.config/dewsesh/config_
 	if _$XDG\_CONFIG\_HOME_ is unset), and _SYSCONFDIR/dewsesh/config_. See
