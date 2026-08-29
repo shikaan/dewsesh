@@ -10,6 +10,8 @@
 #include <unistd.h>
 #include <wordexp.h>
 
+#define len(Array) sizeof(Array) / sizeof(Array[0])
+
 #define CONFIG_VALUE_SEPARATOR '='
 #define CONFIG_NAMESPACE_SEPARATOR '.'
 #define CONFIG_COMMENT '#'
@@ -77,17 +79,13 @@ static void init(void) {
 char *cfg_path(void) {
   static const char *config_paths[] = {
       "$XDG_CONFIG_HOME/" NAME "/config",
+      "$HOME/.config/" NAME "/config",
       SYSCONFDIR "/" NAME "/config",
   };
 
-  char *config_home = getenv("XDG_CONFIG_HOME");
-  if (!config_home || config_home[0] == '\0') {
-    config_paths[1] = "$HOME/.config/" NAME "/config";
-  }
-
   wordexp_t p;
   char *path;
-  for (size_t i = 0; i < sizeof(config_paths) / sizeof(char *); ++i) {
+  for (size_t i = 0; i < len(config_paths); ++i) {
     if (wordexp(config_paths[i], &p, 0) == 0) {
       path = strdup(p.we_wordv[0]);
       wordfree(&p);
