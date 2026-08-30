@@ -7,7 +7,6 @@ run apk add --no-cache \
 
 run apk add --no-cache \
   wayland-dev \
-  wayland-protocols \
   wayland-static \
   cairo-dev \
   cairo-static \

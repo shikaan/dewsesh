@@ -59,8 +59,6 @@ endif
 
 # ------------------
 
-WAYLAND_PROTOCOLS_DIR := $(shell pkg-config --variable=pkgdatadir wayland-protocols)
-
 VERSION ?= v0.0.0
 SHA ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
 
@@ -113,11 +111,11 @@ clean:
 
 protocols/xdg-shell-protocol.h:
 	wayland-scanner client-header \
-		$(WAYLAND_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml $@
+		./protocols/xdg-shell.xml $@
 
 protocols/xdg-shell-protocol.c: protocols/xdg-shell-protocol.h
 	wayland-scanner private-code \
-		$(WAYLAND_PROTOCOLS_DIR)/stable/xdg-shell/xdg-shell.xml $@
+		./protocols/xdg-shell.xml $@
 
 protocols/xdg-shell-protocol.o: CFLAGS := -O2
 protocols/xdg-shell-protocol.o: protocols/xdg-shell-protocol.h \

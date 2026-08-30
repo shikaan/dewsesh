@@ -11,7 +11,6 @@ run apt install -y \
 
 # dependencies
 run apt install -y \
-  wayland-protocols \
   libwayland-dev \
   libcairo2-dev \
   libfreetype-dev
