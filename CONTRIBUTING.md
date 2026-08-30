@@ -29,7 +29,6 @@ Tooling (dev-only, not linked into the binary):
 Dependencies:
 
 * wayland-client
-* wayland-protocols \*
 * cairo
 * freetype2
 
