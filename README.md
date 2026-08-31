@@ -8,9 +8,14 @@ A minimal, beautiful session manager for Wayland.
   <img width="1024" alt="dimmed screen with dewsesh" src="https://github.com/shikaan/dewsesh/blob/main/screenshot.png?raw=true" />
 </p>
 
-dewsesh is a customizable logout menu for Wayland compositors: lock, log out,
-suspend, hibernate, restart, or shut down, with sensible defaults and a
-confirmation screen before anything irreversible.
+dewsesh is a customizable session manager, also called a logout menu, for 
+Wayland compositors.
+
+It takes inspiration from wlogout and oblogout, and differs in three ways:
+
+- Irreversible actions can be stopped
+- No config required
+- One config file, no CSS
 
 ## Installation
 
@@ -18,7 +23,7 @@ confirmation screen before anything irreversible.
 curl -s https://shikaan.github.io/sup/install | REPO=shikaan/dewsesh sh -
 ```
 
-For a manual installation, grab a binary from the
+For a manual installation, download a binary from the
 [releases](https://github.com/shikaan/dewsesh/releases) page. To build from
 source, see [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -55,18 +60,19 @@ every option and configuration key.
 
 ## Compatibility
 
-dewsesh runs on any Wayland compositor implementing the layer-shell protocol,
-which includes all wlroots-based ones.
+dewsesh needs a compositor that implements the layer-shell protocol
+(`zwlr_layer_shell_v1`). Every wlroots-based compositor does, including sway,
+river, and Wayfire, as do Hyprland and niri.
 
 > [!NOTE]
-> Some compositors (notably, GNOME) do NOT implement the layer-shell protocol.
-> Please open an [issue](https://github.com/shikaan/dewsesh/issues) if you'd
-> like to use dewsesh on one of those compositors.
+> GNOME (mutter) and some other compositors do not implement the layer-shell
+> protocol. If you want to use dewsesh on one of these compositors, open an
+> [issue](https://github.com/shikaan/dewsesh/issues).
 
 ## Contributing
 
-If you'd like to contribute code, request a feature, or report a bug, please
-feel free to open an [issue](https://github.com/shikaan/dewsesh/issues).
+To contribute code, request a feature, or report a bug, open an
+[issue](https://github.com/shikaan/dewsesh/issues).
 
 ## License
 

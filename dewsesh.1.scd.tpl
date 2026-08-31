@@ -10,21 +10,20 @@ dewsesh [_options_]
 
 # DESCRIPTION
 
-dewsesh is a customizable session manager (aka, logout menu) for Wayland
-compositors.
+dewsesh is a customizable session manager - also called a logout menu - for
+Wayland compositors.
 
-Upon launching, it shows a menu to lock the screen, log out, or suspend,
-hibernate, restart, and shut down the machine.
+When dewsesh starts, it shows a menu to lock the screen, log out, suspend,
+hibernate, restart, or shut down the machine.
 
-dewsesh is inspired by wlogout and oblogout, aiming for sensible defaults and
-improved usability (e.g., confirmation screens).
+## COMPATIBILITY
 
-## NOTE
-dewsesh uses the layer-shell protocol, which is widely supported by
-wlroots-based compositors. However, GNOME and a few others do NOT support it.
+dewsesh needs a compositor that implements the layer-shell protocol
+(_zwlr\_layer\_shell\_v1_). Every wlroots-based compositor does, including
+sway, river, and Wayfire, as do Hyprland and niri.
 
-For enhanced compatibility, please open an issue at
-https://github.com/shikaan/dewsesh/issues
+GNOME (mutter) and some others do not. If you want support for your favorite
+compositor, open an issue at https://github.com/shikaan/dewsesh/issues
 
 # OPTIONS
 
@@ -45,9 +44,9 @@ https://github.com/shikaan/dewsesh/issues
 
 # CONFIGURATION
 
-The config file consists of _namespace.key=value_ pairs, one per line. Lines
-starting with *#* are treated as comments. See *-c* in *OPTIONS* for the
-config file lookup paths.
+The config file consists of _namespace.key=value_ pairs, one per line.
+dewsesh treats lines that start with *#* as comments. See *-c* in
+*OPTIONS* for the config file lookup paths.
 
 *font.text* <font family>
 	Sets the font family for general text. Defaults to _sans-serif_.
@@ -59,14 +58,14 @@ config file lookup paths.
 	Sets the font family for the icons. Defaults to a bundled icon set.
 
 *font.size* <size>
-	Sets the font size, also used to derive the spacing of every other
-	element on the screen. Defaults to _16_.
+	Sets the font size. dewsesh also uses this value to set the spacing
+	of every other element on the screen. Defaults to _16_.
 
 *action.lock* <command>
 	Sets the command to lock the screen. Defaults to _loginctl lock-session_.
 
 *action.suspend* <command>
-	Sets the command to suspend the machine. Defaults to _systemctl 
+	Sets the command to suspend the machine. Defaults to _systemctl
 	suspend-then-hibernate_.
 
 *action.hibernate* <command>
@@ -80,7 +79,7 @@ config file lookup paths.
 	Sets the command to restart the machine. Defaults to _systemctl reboot_.
 
 *action.shutdown* <command>
-	Sets the command to shutdown the machine. Defaults to _systemctl poweroff_.
+	Sets the command to shut down the machine. Defaults to _systemctl poweroff_.
 
 *color.overlay* <rrggbbaa>
 	Sets the color of the overlay drawn over the screen and behind the
@@ -127,6 +126,33 @@ color.error=FF6B6BFF
 color.selected=82A2BE80
 color.button=00000000
 color.window=00000000
+```
+
+# EXAMPLES
+
+Use dewlock to lock the screen, plain suspend instead of suspend-then-hibernate,
+and a lighter overlay:
+
+```
+action.lock=dewlock
+action.suspend=systemctl suspend
+
+color.overlay=00000088
+```
+
+Match a light desktop theme:
+
+```
+color.overlay=FFFFFFCC
+color.text=1C1C1CFF
+color.status=4A4A4AFF
+color.selected=82A2BE80
+```
+
+Start dewsesh with a config kept outside the search paths:
+
+```
+dewsesh --config ~/dotfiles/dewsesh.conf
 ```
 
 # AUTHOR
