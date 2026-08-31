@@ -1,10 +1,7 @@
-BUILD_TYPE ?= debug
-
 COMMON_CFLAGS := -std=c11 \
 	-D_DEFAULT_SOURCE \
 	-Wall \
 	-Wextra \
-	-Werror \
 	-pedantic \
 	-fdiagnostics-color=always \
 	-fno-common \
@@ -29,16 +26,30 @@ SANITIZERS := -fsanitize=address,undefined
 
 DEBUG_CFLAGS := -g -O0 $(SANITIZERS) -DDEBUG
 
-RELEASE_CFLAGS := -O2 -DNDEBUG
+# Keep debug symbols, packaging tools split them into their own package
+RELEASE_CFLAGS := -O2 -DNDEBUG -g
 
-ifeq ($(BUILD_TYPE),release)
-    CFLAGS := $(COMMON_CFLAGS) $(RELEASE_CFLAGS)
-    LDFLAGS += -s
-else
-    CFLAGS := $(COMMON_CFLAGS) $(DEBUG_CFLAGS)
-    LDFLAGS += $(SANITIZERS)
+# Allow packagers to introduce their own flags
+DISTRO_CFLAGS := $(CFLAGS)
+
+# ------------------
+
+##P ERR_ON_WARN - 0 to keep warnings non-fatal (default: 1)
+ERR_ON_WARN ?= 1
+ifeq ($(ERR_ON_WARN),1)
+    COMMON_CFLAGS += -Werror
 endif
 
+##P BUILD_TYPE  - 'debug' for sanitizers (default: 'release')
+BUILD_TYPE ?= release
+ifeq ($(BUILD_TYPE),debug)
+    CFLAGS := $(COMMON_CFLAGS) $(DEBUG_CFLAGS) $(DISTRO_CFLAGS)
+    LDFLAGS += $(SANITIZERS)
+else
+    CFLAGS := $(COMMON_CFLAGS) $(RELEASE_CFLAGS) $(DISTRO_CFLAGS)
+endif
+
+##P STATIC      - 1 to link the dependencies statically (default: 0)
 STATIC ?= 0
 
 DEPS := wayland-client cairo freetype2
@@ -59,31 +70,49 @@ endif
 
 # ------------------
 
+##P VERSION     - version number in help and manpages (default: 'v0.0.0')
 VERSION ?= v0.0.0
+
+##P SHA         - SHA hash in help and manpages (default: 'dev')
 SHA ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo dev)
+
+##P PREFIX      - install prefix (default: '/usr/local')
+PREFIX ?= /usr/local
+
+##P DESTDIR     - staging directory prepended to every install path
+DESTDIR ?=
+
+# ------------------
+
+BINDIR := $(DESTDIR)$(PREFIX)/bin
+MANDIR := $(DESTDIR)$(PREFIX)/share/man/man1
+BASHDIR := $(DESTDIR)$(PREFIX)/share/bash-completion/completions
+ZSHDIR := $(DESTDIR)$(PREFIX)/share/zsh/site-functions
+FISHDIR := $(DESTDIR)$(PREFIX)/share/fish/vendor_completions.d
 
 .PHONY: all install docs clean help
 
 ### all - build the binary and generate the manpage (default)
 all: main docs
 
-### install - build in release mode and install the executable and manpage
-install: MAN_FOLDER := ~/.local/share/man/man1
-install: BIN_FOLDER := ~/.local/bin
+### install - install the executable, the manpage and the completions
 install:
-	@echo "Installing dewsesh..."
-	@make -s clean
-	@make -s BUILD_TYPE=release all
-	@mkdir -p ${BIN_FOLDER}
-	@cp ./main ${BIN_FOLDER}/dewsesh
-	@chmod +x ${BIN_FOLDER}/dewsesh
-	@echo "Installing dewsesh... DONE"
-	@echo "  Executable: ${BIN_FOLDER}/dewsesh"
-	@if [ -f dewsesh.1.roff ]; then \
-		mkdir -p ${MAN_FOLDER}; \
-		cp dewsesh.1.roff ${MAN_FOLDER}/dewsesh.1; \
-		echo "  Man       : ${MAN_FOLDER}/dewsesh.1"; \
+	@if [ ! -f main ]; then \
+		echo "ERROR: missing binary. Run 'make all' first."; \
+		exit 1; \
 	fi
+	@echo "Installing dewsesh..."
+	@install -Dm755 main ${BINDIR}/dewsesh
+	@echo "  Executable : ${BINDIR}/dewsesh"
+	@if [ -f dewsesh.1.roff ]; then \
+		install -Dm644 dewsesh.1.roff ${MANDIR}/dewsesh.1; \
+		echo "  Man        : ${MANDIR}/dewsesh.1"; \
+	fi
+	@install -Dm644 completions/dewsesh.bash ${BASHDIR}/dewsesh
+	@install -Dm644 completions/dewsesh.zsh ${ZSHDIR}/_dewsesh
+	@install -Dm644 completions/dewsesh.fish ${FISHDIR}/dewsesh.fish
+	@echo "  Completions: ${BASHDIR}, ${ZSHDIR}, ${FISHDIR}"
+	@echo "Installing dewsesh... DONE"
 
 ### docs - generate the manpage from the scdoc template
 docs:
@@ -98,10 +127,13 @@ docs:
 
 ### help - list available targets
 help:
-	@echo "Usage: make [target]"
+	@echo "Usage: make [parameters] [target]"
+	@echo
+	@echo "Parameters:"
+	@grep -e '^##P ' $(MAKEFILE_LIST) | sed 's/^##P /  /'
 	@echo
 	@echo "Targets:"
-	@grep -E '^### ' $(MAKEFILE_LIST) | sed 's/^### /  /'
+	@grep -e '^### ' $(MAKEFILE_LIST) | sed 's/^### /  /'
 
 ### clean - remove build artifacts
 clean:
@@ -117,7 +149,7 @@ protocols/xdg-shell-protocol.c: protocols/xdg-shell-protocol.h
 	wayland-scanner private-code \
 		./protocols/xdg-shell.xml $@
 
-protocols/xdg-shell-protocol.o: CFLAGS := -O2
+protocols/xdg-shell-protocol.o: CFLAGS := -O2 $(DISTRO_CFLAGS)
 protocols/xdg-shell-protocol.o: protocols/xdg-shell-protocol.h \
 	protocols/xdg-shell-protocol.c
 
@@ -129,7 +161,7 @@ protocols/wlr-layer-shell-unstable-v1.c: protocols/wlr-layer-shell-unstable-v1.h
 	wayland-scanner private-code \
 		./protocols/wlr-layer-shell-unstable-v1.xml $@
 
-protocols/wlr-layer-shell-unstable-v1.o: CFLAGS := -O2
+protocols/wlr-layer-shell-unstable-v1.o: CFLAGS := -O2 $(DISTRO_CFLAGS)
 protocols/wlr-layer-shell-unstable-v1.o: protocols/wlr-layer-shell-unstable-v1.h \
 	protocols/wlr-layer-shell-unstable-v1.c
 
@@ -141,7 +173,7 @@ protocols/cursor-shape-v1.c: protocols/cursor-shape-v1.h
 	wayland-scanner private-code \
 		./protocols/cursor-shape-v1.xml $@
 
-protocols/cursor-shape-v1.o: CFLAGS := -O2
+protocols/cursor-shape-v1.o: CFLAGS := -O2 $(DISTRO_CFLAGS)
 protocols/cursor-shape-v1.o: protocols/cursor-shape-v1.h \
 	protocols/cursor-shape-v1.c
 
