@@ -12,7 +12,8 @@ permissions:
   contents: read
 
 jobs:
-  build:
+  static:
+    name: static binary (${{ matrix.arch }})
     strategy:
       fail-fast: false
       matrix:
@@ -24,21 +25,12 @@ jobs:
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
-
       - uses: docker/setup-buildx-action@v3
 
-      - name: Resolve version
+      - uses: ./.github/actions/version
         id: version
-        run: |
-          sha="$(git rev-parse --short HEAD)"
-          echo "sha=${sha}" >> "$GITHUB_OUTPUT"
-          if [ "${{ github.event_name }}" = "release" ]; then
-            echo "version=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
-          else
-            echo "version=v0.0.0-${sha}" >> "$GITHUB_OUTPUT"
-          fi
 
-      - name: Build dewsesh
+      - name: Build static binary
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -46,60 +38,128 @@ jobs:
           build-args: |
             VERSION=${{ steps.version.outputs.version }}
             SHA=${{ steps.version.outputs.sha }}
-          outputs: type=local,dest=build
+          outputs: type=local,dest=dist
           cache-from: type=gha,scope=static-${{ matrix.arch }}
           cache-to: type=gha,mode=max,scope=static-${{ matrix.arch }}
 
       - name: Name the binary after its architecture
-        run: mv build/dewsesh "build/dewsesh-linux-${{ matrix.arch }}"
+        run: mv dist/dewsesh "dist/dewsesh-linux-${{ matrix.arch }}"
 
       - uses: actions/upload-artifact@v4
         with:
           name: dewsesh-linux-${{ matrix.arch }}
-          path: build/dewsesh-linux-${{ matrix.arch }}
+          path: dist/dewsesh-linux-${{ matrix.arch }}
           if-no-files-found: error
 
       - name: Archive man pages
         if: matrix.arch == 'amd64'
-        run: tar -cf dewsesh.1.tar -C build dewsesh.1
+        run: tar -cf dist/dewsesh.1.tar -C dist dewsesh.1
 
       - uses: actions/upload-artifact@v4
         if: matrix.arch == 'amd64'
         with:
-          name: manpage
-          path: dewsesh.1.tar
+          name: dewsesh-manpage
+          path: dist/dewsesh.1.tar
+          if-no-files-found: error
+
+  deb:
+    name: deb package (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            arch: amd64
+          - runner: ubuntu-24.04-arm
+            arch: arm64
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: ./.github/actions/version
+        id: version
+
+      - name: Build deb package
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.deb
+          build-args: |
+            VERSION=${{ steps.version.outputs.version }}
+            SHA=${{ steps.version.outputs.sha }}
+            DEB_VERSION=${{ steps.version.outputs.deb_version }}
+          outputs: type=local,dest=dist
+          cache-from: type=gha,scope=deb-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=deb-${{ matrix.arch }}
+
+      - name: Name the package after its architecture
+        run: cp dist/dewsesh_*_${{ matrix.arch }}.deb "dist/dewsesh-${{ matrix.arch }}.deb"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dewsesh-deb-${{ matrix.arch }}
+          path: dist/*.deb
+          if-no-files-found: error
+
+  pkgbuild:
+    name: PKGBUILD
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: ./.github/actions/version
+        id: version
+
+      - name: Render the PKGBUILD
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+          COMMIT: ${{ steps.version.outputs.sha }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -eu
+          mkdir -p dist
+          url="https://github.com/${REPO}/archive/refs/tags/${TAG}.tar.gz"
+          curl -fsSL --retry 5 --retry-all-errors "$url" -o source.tar.gz
+          sed \
+            -e "s|##VERSION##|${TAG#v}|g" \
+            -e "s|##SHA##|${COMMIT}|g" \
+            -e "s|##CHECKSUM##|$(sha256sum source.tar.gz | cut -d' ' -f1)|g" \
+            packaging/aur/PKGBUILD.tpl > dist/PKGBUILD
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dewsesh-pkgbuild
+          path: dist/PKGBUILD
           if-no-files-found: error
 
   publish:
+    name: attach to release
     if: github.event_name == 'release'
-    needs: build
+    needs: [static, deb, pkgbuild]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: dewsesh-linux-amd64
+          pattern: dewsesh-*
+          merge-multiple: true
           path: dist
 
-      - uses: actions/download-artifact@v4
-        with:
-          name: dewsesh-linux-arm64
-          path: dist
-
-      - uses: actions/download-artifact@v4
-        with:
-          name: manpage
-          path: dist
-
-      - name: Attach the binaries to the release
+      - name: Attach the packages to the release
         env:
           GH_TOKEN: ${{ github.token }}
           GH_REPO: ${{ github.repository }}
+          TAG: ${{ github.event.release.tag_name }}
         run: |
           ls -l dist
-          gh release upload "${{ github.event.release.tag_name }}" \
+          gh release upload "$TAG" \
             dist/dewsesh-linux-amd64 \
             dist/dewsesh-linux-arm64 \
             dist/dewsesh.1.tar \
+            dist/dewsesh-amd64.deb \
+            dist/dewsesh-arm64.deb \
+            dist/PKGBUILD \
             --clobber

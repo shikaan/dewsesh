@@ -1,0 +1,29 @@
+Source: dewsesh
+Section: x11
+Priority: optional
+Maintainer: Manuel Spagnolo <shikaan@disroot.org>
+Build-Depends: debhelper-compat (= 13),
+               pkg-config,
+               libwayland-dev,
+               libwayland-bin,
+               libcairo2-dev,
+               libfreetype-dev,
+               scdoc
+Standards-Version: 4.6.2
+Homepage: https://github.com/shikaan/dewsesh
+Rules-Requires-Root: no
+
+Package: dewsesh
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: session manager for Wayland compositors
+ dewsesh is a customizable session manager, also called a logout menu, for
+ Wayland compositors, focused on providing a beautiful user experience with
+ sensible defaults.
+ .
+ It works with any compositor implementing the layer-shell protocol
+ (zwlr_layer_shell_v1), including sway, river, Wayfire, Hyprland and niri.
+ .
+ Irreversible actions can be stopped before they run, and the whole program
+ is configured from a single file, with no CSS and no configuration required
+ to get started.
