@@ -26,6 +26,7 @@ arg SHA=dev
 workdir /src
 copy . .
 run make BUILD_TYPE=release STATIC=1 VERSION=${VERSION} SHA=${SHA}
+run strip /src/main
 
 from scratch
 copy --from=builder /src/main /dewsesh
