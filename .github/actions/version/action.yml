@@ -1,0 +1,39 @@
+name: Resolve version
+description: Derives the version, short commit sha and Debian version from the triggering event.
+
+outputs:
+  version:
+    description: Release tag, or a v0.0.0 placeholder stamped with the commit.
+    value: ${{ steps.resolve.outputs.version }}
+  sha:
+    description: Short commit sha.
+    value: ${{ steps.resolve.outputs.sha }}
+  deb_version:
+    description: Upstream version in Debian format.
+    value: ${{ steps.resolve.outputs.deb_version }}
+
+runs:
+  using: composite
+  steps:
+    - id: resolve
+      shell: bash
+      env:
+        EVENT: ${{ github.event_name }}
+        TAG: ${{ github.event.release.tag_name }}
+        COMMIT: ${{ github.sha }}
+      run: |
+        set -eu
+        sha="${COMMIT:0:7}"
+        if [ "$EVENT" = "release" ]; then
+          tag="$TAG"
+          version="${tag}"
+          deb_version="${tag#v}"
+        else
+          version="v0.0.0-${sha}"
+          deb_version="0.0.0+${sha}"
+        fi
+        {
+          echo "sha=${sha}"
+          echo "version=${version}"
+          echo "deb_version=${deb_version}"
+        } >> "$GITHUB_OUTPUT"
