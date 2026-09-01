@@ -1,0 +1,40 @@
+from ubuntu:24.04 as builder
+
+env DEBIAN_FRONTEND=noninteractive
+
+run apt-get update -qq && apt-get install -y -qq --no-install-recommends \
+  build-essential \
+  debhelper \
+  devscripts \
+  lintian \
+  pkg-config \
+  scdoc
+
+run apt-get install -y -qq --no-install-recommends \
+  libwayland-dev \
+  libwayland-bin \
+  libcairo2-dev \
+  libfreetype-dev
+
+arg VERSION=v0.0.0
+arg SHA=deb
+arg DEB_VERSION=0.0.0
+
+workdir /src
+copy . .
+
+run cp -r packaging/deb debian && \
+  printf '%s\n' \
+    "dewsesh (${DEB_VERSION}-1) unstable; urgency=medium" \
+    "" \
+    "  * CI build of ${VERSION} (${SHA})." \
+    "" \
+    " -- Manuel Spagnolo <shikaan@disroot.org>  $(date -R)" \
+    > debian/changelog
+
+run SHA=${SHA} dpkg-buildpackage -b -us -uc
+run lintian ../*.deb || true
+run mkdir /out && mv ../*.deb /out/
+
+from scratch
+copy --from=builder /out /
