@@ -45,7 +45,8 @@ result_t spw_launch(const char *command) {
     close(fds[0]);
     exec(command);
     int err = errno;
-    write(fds[1], &err, sizeof(err));
+    ssize_t written = write(fds[1], &err, sizeof(err));
+    (void)written;
     exit(127);
   }
 
