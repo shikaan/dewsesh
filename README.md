@@ -19,33 +19,50 @@ It takes inspiration from wlogout and oblogout, and differs in three ways:
 
 ## Installation
 
+### Static binary
+
 ```sh
 curl -s https://shikaan.github.io/sup/install | REPO=shikaan/dewsesh sh -
 ```
 
-For a manual installation, download a binary from the
-[releases](https://github.com/shikaan/dewsesh/releases) page. To build from
-source, see [CONTRIBUTING.md](CONTRIBUTING.md).
+### Packaged releases
 
-### Shell completions
+Packages are available at
+[Releases](https://github.com/shikaan/dewsesh/releases/latest).
 
-Optionally, you can install shell completions:
+For Debian-based distributions:
 
 ```sh
-# bash
-curl -sL --create-dirs \
-  https://raw.githubusercontent.com/shikaan/dewsesh/main/completions/dewsesh.bash \
-  -o ~/.local/share/bash-completion/completions/dewsesh
+curl -LO https://github.com/shikaan/dewsesh/releases/latest/download/dewsesh-amd64.deb
+sudo apt install ./dewsesh-amd64.deb
+```
 
-# zsh - any directory on your $fpath works
-curl -sL --create-dirs \
-  https://raw.githubusercontent.com/shikaan/dewsesh/main/completions/dewsesh.zsh \
-  -o ~/.local/share/zsh/site-functions/_dewsesh
+Replace `amd64` with `arm64` on ARM systems.
 
-# fish
-curl -sL --create-dirs \
-  https://raw.githubusercontent.com/shikaan/dewsesh/main/completions/dewsesh.fish \
-  -o ~/.config/fish/completions/dewsesh.fish
+For Arch-based distributions, every release also includes a `PKGBUILD`:
+
+```sh
+curl -LO https://github.com/shikaan/dewsesh/releases/latest/download/PKGBUILD
+makepkg -si
+```
+
+Packages install the executable, the manpage, and the shell completions.
+
+### From source
+
+Install the dependencies listed in [CONTRIBUTING.md](CONTRIBUTING.md), then
+build and install dewsesh:
+
+```sh
+make all
+sudo make install
+```
+
+This installs the files under `/usr/local`. To install dewsesh in a different
+location, set the `PREFIX` variable:
+
+```sh
+make install PREFIX=~/.local
 ```
 
 ## Usage

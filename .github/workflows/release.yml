@@ -51,7 +51,7 @@ jobs:
           path: dist/dewsesh-linux-${{ matrix.arch }}
           if-no-files-found: error
 
-      - name: Archive man pages
+      - name: Archive the manpage
         if: matrix.arch == 'amd64'
         run: tar -cf dist/dewsesh.1.tar -C dist dewsesh.1
 
