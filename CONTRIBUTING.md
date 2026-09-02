@@ -10,10 +10,11 @@ Docker/Podman.
 Once you're set up (either way):
 
 ```
-make          # to build binary and manpage (if scdoc is available)
-make install  # to install dewsesh locally
-make main     # to only build the binary
-make help     # to see available make targets
+make                   # build the binary and the manpage (needs scdoc)
+make BUILD_TYPE=debug  # build with sanitizers and debug symbols
+make install           # install dewsesh under /usr/local
+make main              # build only the binary
+make help              # show the available targets and parameters
 ```
 
 ## Building from source (local)
@@ -22,17 +23,14 @@ Tooling (dev-only, not linked into the binary):
 * GNU make
 * pkg-config
 * wayland-scanner (usually part of `libwayland-bin`/`wayland-utils`)
-* a C11 compiler (e.g. gcc or clang)
-* git (optional: embeds the commit SHA in `--version`)
-* scdoc (optional: builds the man page)
+* a C11 compiler (for example, gcc)
+* scdoc (optional: builds the manpage)
 
 Dependencies:
 
 * wayland-client
 * cairo
 * freetype2
-
-_\* Compile-time dep_
 
 ```sh
 make
@@ -53,16 +51,18 @@ podman build . -t dewsesh
 podman run --rm -it -v "$(pwd):/src:Z" --name dewsesh dewsesh
 ```
 
-## Making a static binary
+## Building a static binary
 
-Releases ship a single statically linked executable, built against musl inside
-Alpine by [Dockerfile.static](./Dockerfile.static).
+Releases include a single statically linked executable.
+[Dockerfile.static](./Dockerfile.static) contains the toolchain and the steps to
+build it.
 
 ```sh
 podman build . -f Dockerfile.static -o dist
 ```
 
-That writes `dist/dewsesh` and `dist/dewsesh.1`.
+That writes `dist/dewsesh` and `dist/dewsesh.1`. A tool like
+[sup](https://github.com/shikaan/sup) can then distribute these files.
 
 > [!NOTE]
 > Outside the image, `make STATIC=1` switches `pkg-config` to `--static` and 
@@ -70,6 +70,48 @@ That writes `dist/dewsesh` and `dist/dewsesh.1`.
 > which most distributions do not package.
 >
 > Use a [dynamic build](#building-from-source-container) for local development
+
+## Packaging
+
+### Generating a dynamic build
+
+Build and install dewsesh with make:
+
+```sh
+make VERSION="$pkgver" ERR_ON_WARN=0 all
+make install DESTDIR="$pkgdir" PREFIX=/usr
+```
+
+`ERR_ON_WARN=0` removes `-Werror`. Warnings then do not stop the build when the
+distribution adds its own compiler flags.
+
+These commands create the files below:
+
+```
+$pkgdir/usr/bin/dewsesh
+$pkgdir/usr/share/man/man1/dewsesh.1
+$pkgdir/usr/share/bash-completion/completions/dewsesh
+$pkgdir/usr/share/zsh/site-functions/_dewsesh
+$pkgdir/usr/share/fish/vendor_completions.d/dewsesh.fish
+```
+
+### deb and AUR
+
+The [`packaging`](./packaging) directory contains the files that build the deb
+and the AUR packages.
+
+Build the deb package with [Dockerfile.deb](./Dockerfile.deb). It contains the
+dependencies and the steps to build it.
+
+```sh
+podman build -f Dockerfile.deb -o dist .
+```
+
+For AUR, the release pipeline creates a `PKGBUILD` from the template
+`packaging/aur/PKGBUILD.tpl`, and attaches it to the release.
+
+The pipeline configuration is in
+[.github/workflows/release.yml](./.github/workflows/release.yml).
 
 ## Using LSPs
 
